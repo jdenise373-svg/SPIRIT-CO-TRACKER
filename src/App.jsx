@@ -339,6 +339,7 @@ function App() {
     const [showProductionModal, setShowProductionModal] = useState(false);
     const [editingProductionBatch, setEditingProductionBatch] = useState(null);
     const [productionModalType, setProductionModalType] = useState('fermentation');
+    const [showChangeAccountModal, setShowChangeAccountModal] = useState(false);
     const [sortCriteria, setSortCriteria] = useState('name_asc');
     const appId = '1:587421865283:web:b58af950daaa93ce450bf6';
 
@@ -479,6 +480,10 @@ const handleLogout = async () => {
     const handleOpenTtbReportModal = () => setShowTtbReportModal(true);
     const handleAddProductionBatch = (type) => { setEditingProductionBatch(null); setProductionModalType(type); setShowProductionModal(true); };
     const handleEditProductionBatch = (batch) => { setEditingProductionBatch(batch); setProductionModalType(batch.batchType); setShowProductionModal(true); };
+    const handleOpenChangeAccountModal = (container) => {
+        setEditingContainer(container);
+        setShowChangeAccountModal(true);
+    };
 
     const confirmDeletion = async () => {
         if (!db || !userId || !itemToDelete) return;
@@ -555,7 +560,7 @@ const handleLogout = async () => {
                     </div>
                     {isLoading && isAuthReady && userId && <div className="text-xl p-8 text-center">Loading data...</div>}
                     {!isLoading && sortedInventory.length === 0 && isAuthReady && userId && <div className="text-gray-400 text-lg p-8 text-center">No containers. Add one!</div>}
-                    {!isLoading && sortedInventory.length > 0 && (<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-8">{sortedInventory.map(c => <InventoryItem key={c.id} container={c} onEditInfo={handleEditContainerInfo} onRefill={handleRefillContainer} onTransfer={handleOpenTransferModal} onSample={handleOpenSampleModal} onProofDown={handleOpenProofDownModal} onBottle={handleOpenBottlingModal} onDelete={(id) => handleDeletePrompt(inventory.find(c => c.id === id), 'container')} />)}</div>)}
+                    {!isLoading && sortedInventory.length > 0 && (<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-8">{sortedInventory.map(c => <InventoryItem key={c.id} container={c} onEditInfo={handleEditContainerInfo} onRefill={handleRefillContainer} onTransfer={handleOpenTransferModal} onSample={handleOpenSampleModal} onProofDown={handleOpenProofDownModal} onBottle={handleOpenBottlingModal} onDelete={(id) => handleDeletePrompt(inventory.find(c => c.id === id), 'container')} onChangeAccount={handleOpenChangeAccountModal}/>)}</div>)}
                 </>
             ) : (
                 <ProductionView 
@@ -677,6 +682,7 @@ const handleLogout = async () => {
                 itemToDelete.type === 'productionBatch' ? `Delete batch "${itemToDelete.item.name}"? This cannot be undone.` :
                 'Are you sure you want to delete this item?'
             } onConfirm={confirmDeletion} onCancel={() => {setShowConfirmModal(false); setItemToDelete(null);}} />}
+            {showChangeAccountModal && db && userId && editingContainer && <ChangeAccountModal db={db} userId={userId} appId={appId} container={editingContainer} onClose={() => {setShowChangeAccountModal(false); setEditingContainer(null);}} setErrorApp={setError} />}
         </div>
     );
 }
@@ -801,7 +807,7 @@ const DropdownItem = ({ children, onClick }) => (
 
 
 // --- InventoryItem ---
-const InventoryItem = ({ container, onEditInfo, onRefill, onTransfer, onSample, onProofDown, onBottle, onDelete }) => {
+const InventoryItem = ({ container, onEditInfo, onRefill, onTransfer, onSample, onProofDown, onBottle, onDelete, onChangeAccount }) => {
     const { name, type, status, currentFill, tareWeightLbs } = container;
     const { fillDate = 'N/A', grossWeightLbs = 0, proof = 0, netWeightLbs = 0, wineGallons = 0, proofGallons = 0, emptiedDate = null, productType = "Unspecified" } = currentFill || {};
     const capacity = CONTAINER_CAPACITIES_GALLONS[type] || 0;
@@ -822,6 +828,11 @@ const InventoryItem = ({ container, onEditInfo, onRefill, onTransfer, onSample, 
                 </div>
                 <div className="text-center mb-3 w-full">
                     <h3 className="text-2xl font-semibold text-blue-300 truncate" title={name}>{name}</h3>
+                    {status === 'filled' && currentFill.account && (
+                        <p className="text-xs font-semibold mt-1 px-2 py-0.5 rounded-full inline-block bg-blue-800 text-blue-200">
+                            Account: {currentFill.account.charAt(0).toUpperCase() + currentFill.account.slice(1)}
+                        </p>
+                    )}
                     <p className={`text-sm font-semibold mt-1 px-2 py-0.5 rounded-full inline-block ${status === 'filled' ? 'bg-green-700 text-green-100' : 'bg-yellow-700 text-yellow-100'}`}>
                         {status === 'filled' ? (type === 'still' ? 'In Use' : 'Filled') : 'Empty'}
                     </p>
@@ -848,6 +859,7 @@ const InventoryItem = ({ container, onEditInfo, onRefill, onTransfer, onSample, 
             <div className="mt-4 flex flex-wrap gap-2 justify-end pt-3 border-t border-gray-700">
                 <button onClick={() => onEditInfo(container)} className="bg-gray-600 hover:bg-gray-500 text-xs py-2 px-3 rounded-md">Edit Info</button>
                 {status === 'filled' ? (<>
+                    <button onClick={() => onChangeAccount(container)} className="bg-gray-500 hover:bg-gray-400 text-xs py-2 px-3 rounded-md">Change Account</button>
                     <button onClick={() => onBottle(container)} className="bg-sky-600 hover:bg-sky-500 text-xs py-2 px-3 rounded-md">Bottle</button>
                     <button onClick={() => onTransfer(container)} className="bg-purple-600 hover:bg-purple-500 text-xs py-2 px-3 rounded-md">Transfer</button>
                     <button onClick={() => onProofDown(container)} className="bg-cyan-600 hover:bg-cyan-500 text-xs py-2 px-3 rounded-md">Proof Down</button>
@@ -862,7 +874,7 @@ const InventoryItem = ({ container, onEditInfo, onRefill, onTransfer, onSample, 
 // --- AddEditContainerModal ---
 const AddEditContainerModal = ({ db, userId, appId, container, mode, products, inventory, onClose, setErrorApp }) => {
     const isEditMode = mode === 'edit'; const isRefillMode = mode === 'refill'; const getDefaultProductType = () => products.length > 0 ? products[0].name : "Unspecified Spirit";
-    const initialFormData = { name: '', type: 'wooden_barrel', tareWeightLbs: '', productType: getDefaultProductType(), fillDate: new Date().toISOString().split('T')[0], grossWeightLbs: '', proof: '' };
+    const initialFormData = { name: '', type: 'wooden_barrel', tareWeightLbs: '', productType: getDefaultProductType(), fillDate: new Date().toISOString().split('T')[0], grossWeightLbs: '', proof: '', account: 'storage' };
     const [formData, setFormData] = useState(initialFormData);
     const [calculated, setCalculated] = useState({ netWeightLbs: 0, wineGallons: 0, proofGallons: 0, spiritDensity: 0, grossWeightLbs: 0 });
     const [formError, setFormError] = useState('');
@@ -885,13 +897,13 @@ const AddEditContainerModal = ({ db, userId, appId, container, mode, products, i
             if (isRefillMode) { grossW = ''; prf = ''; wgInput = ''; pgInput = ''; fDate = new Date().toISOString().split('T')[0]; }
 
             setIsAddingEmpty(false);
-            setFormData({ name: container.name || '', type: container.type || 'wooden_barrel', tareWeightLbs: container.tareWeightLbs?.toString() || '', productType: productT, fillDate: fDate, grossWeightLbs: grossW, proof: prf });
+            setFormData({ name: container.name || '', type: container.type || 'wooden_barrel', tareWeightLbs: container.tareWeightLbs?.toString() || '', productType: productT, fillDate: fDate, grossWeightLbs: grossW, proof: prf, account: container.currentFill?.account || 'storage' });
             setWineGallonsInput(wgInput);
             setProofGallonsInput(pgInput);
             setFillInputMethod('weight');
         } else {
             setIsAddingEmpty(true);
-            setFormData({...initialFormData, productType: productT});
+            setFormData({...initialFormData, productType: productT, account: 'storage'});
             setWineGallonsInput('');
             setProofGallonsInput('');
         }
@@ -1071,6 +1083,7 @@ const AddEditContainerModal = ({ db, userId, appId, container, mode, products, i
                 netWeightLbs: finalCalcs.netWeightLbs,
                 wineGallons: finalCalcs.wineGallons,
                 proofGallons: finalCalcs.proofGallons,
+                account: formData.account || 'storage',
                 spiritDensity: finalCalcs.spiritDensity,
                 emptiedDate: newStatus === 'empty' ? (container?.status === 'filled' ? new Date().toISOString().split('T')[0] : (oldFillData.emptiedDate || new Date().toISOString().split('T')[0])) : null
             }
@@ -1116,7 +1129,17 @@ const AddEditContainerModal = ({ db, userId, appId, container, mode, products, i
         <label htmlFor="productType" className="block text-sm font-medium text-gray-300">Product Type</label><select id="productType" name="productType" value={formData.productType} onChange={handleChange} className="mt-1 w-full bg-gray-700 p-2 rounded" required={!isAddingEmpty || mode === 'refill'}><option value="">-- Select Product --</option>{products.map(p => <option key={p.id} value={p.name}>{p.name}</option>)}</select>
         <label htmlFor="fillDate" className="block text-sm font-medium text-gray-300 mt-2">Date of Fill</label><input id="fillDate" type="date" name="fillDate" value={formData.fillDate} onChange={handleChange} className="mt-1 w-full bg-gray-700 p-2 rounded"/>
         <label htmlFor="proof" className="block text-sm font-medium text-gray-300 mt-2">Proof (0-200)</label><input id="proof" type="number" name="proof" value={formData.proof} onChange={handleChange} step="0.1" min="0" max="200" className="mt-1 w-full bg-gray-700 p-2 rounded"/>
-
+        <label htmlFor="account" className="block text-sm font-medium text-gray-300 mt-2">Account</label>
+        <select
+            id="account"
+            name="account"
+            value={formData.account}
+            onChange={handleChange}
+            className="mt-1 w-full bg-gray-700 p-2 rounded">
+            <option value="storage">Storage</option>
+            <option value="production">Production</option>
+            <option value="processing">Processing</option>
+        </select>
         {fillInputMethod === 'weight' && <div><label htmlFor="grossWeightLbs" className="block text-sm font-medium text-gray-300 mt-2">Gross Weight (lbs)</label><input id="grossWeightLbs" type="number" name="grossWeightLbs" value={formData.grossWeightLbs} onChange={handleChange} step="0.01" min="0" className="mt-1 w-full bg-gray-700 p-2 rounded"/></div>}
         {fillInputMethod === 'wineGallons' && <div><label htmlFor="wineGallonsInput" className="block text-sm font-medium text-gray-300 mt-2">Wine Gallons</label><input id="wineGallonsInput" type="number" name="wineGallonsInput" value={wineGallonsInput} onChange={handleChange} step="0.001" min="0" className="mt-1 w-full bg-gray-700 p-2 rounded"/></div>}
         {fillInputMethod === 'proofGallons' && <div><label htmlFor="proofGallonsInput" className="block text-sm font-medium text-gray-300 mt-2">Proof Gallons</label><input id="proofGallonsInput" type="number" name="proofGallonsInput" value={proofGallonsInput} onChange={handleChange} step="0.001" min="0" className="mt-1 w-full bg-gray-700 p-2 rounded"/></div>}
@@ -1157,7 +1180,7 @@ const TransferModal = ({ db, userId, appId, sourceContainer, allContainers, onCl
 
             const newDestGrossNum = (parseFloat(destContainerData.tareWeightLbs) || 0) + netToTransfer;
             const destCalcs = calculateDerivedValuesFromWeight(parseFloat(destContainerData.tareWeightLbs) || 0, newDestGrossNum, sourceProof);
-            batch.update(destRef, { status: 'filled', "currentFill.productType": sourceProductType, "currentFill.fillDate": new Date().toISOString().split('T')[0], "currentFill.grossWeightLbs": destCalcs.grossWeightLbs, "currentFill.proof": sourceProof, "currentFill.netWeightLbs": destCalcs.netWeightLbs, "currentFill.wineGallons": destCalcs.wineGallons, "currentFill.proofGallons": destCalcs.proofGallons, "currentFill.spiritDensity": destCalcs.spiritDensity, "currentFill.emptiedDate": null });
+            batch.update(destRef, { status: 'filled', "currentFill.productType": sourceProductType, "currentFill.fillDate": new Date().toISOString().split('T')[0], "currentFill.grossWeightLbs": destCalcs.grossWeightLbs, "currentFill.proof": sourceProof, "currentFill.netWeightLbs": destCalcs.netWeightLbs, "currentFill.wineGallons": destCalcs.wineGallons, "currentFill.proofGallons": destCalcs.proofGallons, "currentFill.spiritDensity": destCalcs.spiritDensity, "currentFill.account": sourceContainer.currentFill?.account || 'storage', "currentFill.emptiedDate": null });
             logTransaction(db, userId, appId, {type: "TRANSFER_IN", containerId: destinationId, containerName: destContainerData.name, productType: sourceProductType, proof: sourceProof, netWeightLbsChange: netToTransfer, proofGallonsChange: pgTransferred, sourceContainerId: sourceContainer.id, sourceContainerName: sourceContainer.name, notes: `From ${sourceContainer.name}` });
 
             await batch.commit(); setErrorApp(''); onClose();
@@ -2197,6 +2220,73 @@ const AddEditProductionModal = ({ db, userId, appId, batch, type, fermentations,
                     <div className="flex justify-end space-x-3 pt-2">
                         <button type="button" onClick={onClose} className="bg-gray-600 py-2 px-4 rounded">Cancel</button>
                         <button type="submit" className="bg-blue-600 py-2 px-4 rounded">Save Batch</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
+};
+
+const ChangeAccountModal = ({ db, userId, appId, container, onClose, setErrorApp }) => {
+    const [newAccount, setNewAccount] = useState(container?.currentFill?.account || 'storage');
+    const [formError, setFormError] = useState('');
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setFormError('');
+        
+        if (!newAccount.trim()) {
+            setFormError("Please select an account.");
+            return;
+        }
+
+        try {
+            const containerRef = doc(db, `artifacts/${appId}/users/${userId}/spiritInventory`, container.id);
+            await updateDoc(containerRef, {
+                "currentFill.account": newAccount
+            });
+            
+            await logTransaction(db, userId, appId, {
+                type: "CHANGE_ACCOUNT",
+                containerId: container.id,
+                containerName: container.name,
+                notes: `Account changed to ${newAccount}.`
+            });
+            
+            setErrorApp('');
+            onClose();
+        } catch (err) {
+            console.error("Change account error:", err);
+            setFormError("Failed to change account: " + err.message);
+            setErrorApp("Failed to change account.");
+        }
+    };
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-50">
+            <div className="bg-gray-800 p-6 rounded-lg shadow-xl w-full max-w-md">
+                <h2 className="text-xl mb-4 text-blue-300">Change Account: {container?.name}</h2>
+                {formError && <div className="bg-red-600 p-2 rounded mb-3 text-sm">{formError}</div>}
+                <form onSubmit={handleSubmit} className="space-y-4">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-300 mb-2">Account</label>
+                        <select 
+                            value={newAccount} 
+                            onChange={(e) => setNewAccount(e.target.value)}
+                            className="w-full bg-gray-700 p-2 rounded"
+                        >
+                            <option value="storage">Storage</option>
+                            <option value="production">Production</option>
+                            <option value="processing">Processing</option>
+                        </select>
+                    </div>
+                    <div className="flex justify-end space-x-3">
+                        <button type="button" onClick={onClose} className="bg-gray-600 py-2 px-4 rounded">
+                            Cancel
+                        </button>
+                        <button type="submit" className="bg-blue-600 py-2 px-4 rounded">
+                            Change Account
+                        </button>
                     </div>
                 </form>
             </div>
