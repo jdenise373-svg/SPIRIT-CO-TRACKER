@@ -667,7 +667,7 @@ const handleLogout = async () => {
             
             {/* Modals */}
             {showFormModal && db && userId && <AddEditContainerModal db={db} userId={userId} appId={appId} container={editingContainer} mode={formModalMode} products={products} inventory={inventory} onClose={() => {setShowFormModal(false); setEditingContainer(null);}} setErrorApp={setError} />}
-            {showProductionModal && db && userId && <AddEditProductionModal db={db} userId={userId} appId={appId} batch={editingProductionBatch} type={productionModalType} fermentations={productionBatches.filter(b => b.batchType === 'fermentation')} products={products} onClose={() => {setShowProductionModal(false); setEditingProductionBatch(null);}} setErrorApp={setError} />}
+            {showProductionModal && db && userId && <AddEditProductionModal db={db} userId={userId} appId={appId} batch={editingProductionBatch} type={productionModalType} fermentations={productionBatches.filter(b => b.batchType === 'fermentation')} products={products} inventory={inventory} onClose={() => {setShowProductionModal(false); setEditingProductionBatch(null);}} setErrorApp={setError} />}
             {showTransferModal && db && userId && transferSourceContainer && <TransferModal db={db} userId={userId} appId={appId} sourceContainer={transferSourceContainer} allContainers={inventory} products={products} onClose={() => {setShowTransferModal(false); setTransferSourceContainer(null);}} setErrorApp={setError} />}
             {showAdjustContentsModal && db && userId && adjustingContainer && <AdjustContentsModal db={db} userId={userId} appId={appId} container={adjustingContainer} onClose={() => {setShowAdjustContentsModal(false); setAdjustingContainer(null);}} setErrorApp={setError} />}
             {showProofDownModal && db && userId && proofingContainer && <ProofDownModal db={db} userId={userId} appId={appId} container={proofingContainer} onClose={() => {setShowProofDownModal(false); setProofingContainer(null);}} setErrorApp={setError} />}
@@ -2088,8 +2088,16 @@ const ProductionList = ({ title, batches, onEdit, onDelete }) => (
                             ) : (
                                 <>
                                     <p><strong>Source:</strong> {batch.sourceBatchName || 'N/A'}</p>
-                                    <p><strong>Output:</strong> {batch.volumeOut} gal @ {batch.proofOut} proof ({batch.proofGallonsOut?.toFixed(3)} PG)</p>
+                                    {batch.chargeCalculated && batch.chargeCalculated.proofGallons > 0 && (
+                                        <p><strong>Charge:</strong> {batch.chargeCalculated.proofGallons.toFixed(3)} PG @ {batch.chargeProof} proof</p>
+                                    )}
+                                    {batch.yieldCalculated && batch.yieldCalculated.proofGallons > 0 && (
+                                        <p><strong>Yield:</strong> {batch.yieldCalculated.proofGallons.toFixed(3)} PG @ {batch.yieldProof} proof</p>
+                                    )}
                                     <p><strong>Product:</strong> {batch.productType}</p>
+                                    {batch.selectedContainerId && (
+                                        <p><strong>Stored In:</strong> {batch.selectedContainerName || 'Container'}</p>
+                                    )}
                                 </>
                             )}
                             {batch.notes && <p className="text-xs text-gray-400 pt-1 border-t border-gray-700 mt-2"><em>Notes: {batch.notes}</em></p>}
@@ -2101,10 +2109,29 @@ const ProductionList = ({ title, batches, onEdit, onDelete }) => (
     </div>
 );
 
-const AddEditProductionModal = ({ db, userId, appId, batch, type, fermentations, products, onClose, setErrorApp }) => {
+const AddEditProductionModal = ({ db, userId, appId, batch, type, fermentations, products, inventory, onClose, setErrorApp }) => {
     const isEdit = !!batch;
     const [formData, setFormData] = useState({});
     const [formError, setFormError] = useState('');
+    
+    // New state for flexible measurement inputs
+    const [chargeInputMethod, setChargeInputMethod] = useState('weight');
+    const [yieldInputMethod, setYieldInputMethod] = useState('weight');
+    const [chargeInputValue, setChargeInputValue] = useState('');
+    const [yieldInputValue, setYieldInputValue] = useState('');
+    const [chargeCalculated, setChargeCalculated] = useState({ netWeightLbs: 0, wineGallons: 0, proofGallons: 0 });
+    const [yieldCalculated, setYieldCalculated] = useState({ netWeightLbs: 0, wineGallons: 0, proofGallons: 0 });
+    const [selectedContainerId, setSelectedContainerId] = useState('');
+
+    // Get empty containers for yield storage
+    const emptyContainers = useMemo(() => {
+        return inventory.filter(c => c.status === 'empty').map(c => ({
+            id: c.id,
+            name: c.name,
+            type: c.type,
+            displayName: `${c.name} (${c.type.replace(/_/g, ' ')})`
+        }));
+    }, [inventory]);
 
     useEffect(() => {
         if (type === 'fermentation') {
@@ -2122,21 +2149,89 @@ const AddEditProductionModal = ({ db, userId, appId, batch, type, fermentations,
                 name: batch?.name || '',
                 date: batch?.date || new Date().toISOString().split('T')[0],
                 sourceBatchId: batch?.sourceBatchId || '',
-                volumeIn: batch?.volumeIn || '',
-                volumeOut: batch?.volumeOut || '',
-                proofOut: batch?.proofOut || '',
+                chargeProof: batch?.chargeProof || '',
+                yieldProof: batch?.yieldProof || '',
                 productType: batch?.productType || 'Low Wines',
                 notes: batch?.notes || ''
             });
+            
+            // Set existing values if editing
+            if (batch) {
+                if (batch.chargeInputMethod) setChargeInputMethod(batch.chargeInputMethod);
+                if (batch.yieldInputMethod) setYieldInputMethod(batch.yieldInputMethod);
+                if (batch.chargeInputValue) setChargeInputValue(batch.chargeInputValue);
+                if (batch.yieldInputValue) setYieldInputValue(batch.yieldInputValue);
+                if (batch.selectedContainerId) setSelectedContainerId(batch.selectedContainerId);
+            }
         }
     }, [batch, type]);
+
+    // Calculate charge values based on input method
+    useEffect(() => {
+        const chargeProof = parseFloat(formData.chargeProof) || 0;
+        const chargeValue = parseFloat(chargeInputValue) || 0;
+        
+        if (chargeValue > 0 && chargeProof > 0) {
+            let calculated;
+            if (chargeInputMethod === 'weight') {
+                calculated = calculateDerivedValuesFromWeight(0, chargeValue, chargeProof);
+            } else if (chargeInputMethod === 'wineGallons') {
+                calculated = calculateDerivedValuesFromWineGallons(chargeValue, chargeProof, 0);
+            } else { // proofGallons
+                calculated = calculateDerivedValuesFromProofGallons(chargeValue, chargeProof, 0);
+            }
+            setChargeCalculated(calculated);
+        } else {
+            setChargeCalculated({ netWeightLbs: 0, wineGallons: 0, proofGallons: 0 });
+        }
+    }, [chargeInputValue, chargeInputMethod, formData.chargeProof]);
+
+    // Calculate yield values based on input method
+    useEffect(() => {
+        const yieldProof = parseFloat(formData.yieldProof) || 0;
+        const yieldValue = parseFloat(yieldInputValue) || 0;
+        
+        if (yieldValue > 0 && yieldProof > 0) {
+            let calculated;
+            if (yieldInputMethod === 'weight') {
+                calculated = calculateDerivedValuesFromWeight(0, yieldValue, yieldProof);
+            } else if (yieldInputMethod === 'wineGallons') {
+                calculated = calculateDerivedValuesFromWineGallons(yieldValue, yieldProof, 0);
+            } else { // proofGallons
+                calculated = calculateDerivedValuesFromProofGallons(yieldValue, yieldProof, 0);
+            }
+            setYieldCalculated(calculated);
+        } else {
+            setYieldCalculated({ netWeightLbs: 0, wineGallons: 0, proofGallons: 0 });
+        }
+    }, [yieldInputValue, yieldInputMethod, formData.yieldProof]);
 
     const handleChange = (e) => setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setFormError('');
-        const dataToSave = { ...formData, batchType: type };
+        
+        // Validate container selection for distillation yield
+        if (type === 'distillation' && !isEdit && (!selectedContainerId || selectedContainerId === '')) {
+            setFormError('Please select a container to store the distillation yield.');
+            return;
+        }
+        
+        const dataToSave = { 
+            ...formData, 
+            batchType: type,
+            // Add new fields for distillation
+            ...(type === 'distillation' && {
+                chargeInputMethod,
+                chargeInputValue,
+                yieldInputMethod,
+                yieldInputValue,
+                selectedContainerId,
+                chargeCalculated,
+                yieldCalculated
+            })
+        };
         
         try {
             const batchRef = writeBatch(db);
@@ -2151,20 +2246,57 @@ const AddEditProductionModal = ({ db, userId, appId, batch, type, fermentations,
                 batchRef.set(docRef, dataToSave);
             }
             
-            // Log transaction for distillation finish
-            if (type === 'distillation' && dataToSave.volumeOut > 0 && dataToSave.proofOut > 0) {
-                const pg = (parseFloat(dataToSave.volumeOut) * (parseFloat(dataToSave.proofOut) / 100));
+            // Handle distillation yield storage and logging
+            if (type === 'distillation' && yieldCalculated.proofGallons > 0) {
+                const pg = yieldCalculated.proofGallons;
                 const logData = {
                     type: "DISTILLATION_FINISH",
                     batchId: docRef.id,
                     batchName: dataToSave.name,
                     productType: dataToSave.productType,
-                    proof: parseFloat(dataToSave.proofOut),
+                    proof: parseFloat(dataToSave.yieldProof),
                     proofGallonsChange: pg,
                     notes: `Produced ${pg.toFixed(3)} PG of ${dataToSave.productType}.`
                 };
                 const logCollRef = collection(db, `artifacts/${appId}/users/${userId}/transactionLog`);
                 batchRef.set(doc(logCollRef), {...logData, timestamp: serverTimestamp()});
+                
+                // Update selected container if not editing
+                if (!isEdit && selectedContainerId) {
+                    const selectedContainer = inventory.find(c => c.id === selectedContainerId);
+                    if (selectedContainer && selectedContainer.status === 'empty') {
+                        const containerRef = doc(db, `artifacts/${appId}/users/${userId}/spiritInventory`, selectedContainerId);
+                        const containerUpdate = {
+                            status: 'filled',
+                            currentFill: {
+                                productType: dataToSave.productType,
+                                fillDate: dataToSave.date,
+                                proof: parseFloat(dataToSave.yieldProof),
+                                netWeightLbs: yieldCalculated.netWeightLbs,
+                                wineGallons: yieldCalculated.wineGallons,
+                                proofGallons: yieldCalculated.proofGallons,
+                                grossWeightLbs: yieldCalculated.grossWeightLbs,
+                                spiritDensity: yieldCalculated.spiritDensity,
+                                account: 'storage',
+                                emptiedDate: null
+                            }
+                        };
+                        batchRef.update(containerRef, containerUpdate);
+                        
+                        // Log container fill
+                        const containerLogData = {
+                            type: "CREATE_FILLED_CONTAINER",
+                            containerId: selectedContainerId,
+                            containerName: selectedContainer.name,
+                            productType: dataToSave.productType,
+                            proof: parseFloat(dataToSave.yieldProof),
+                            netWeightLbsChange: yieldCalculated.netWeightLbs,
+                            proofGallonsChange: yieldCalculated.proofGallons,
+                            notes: `Filled with ${yieldCalculated.proofGallons.toFixed(3)} PG from distillation batch ${dataToSave.name}.`
+                        };
+                        batchRef.set(doc(logCollRef), {...containerLogData, timestamp: serverTimestamp()});
+                    }
+                }
             }
 
             await batchRef.commit();
@@ -2200,20 +2332,145 @@ const AddEditProductionModal = ({ db, userId, appId, batch, type, fermentations,
                     ) : (
                         <>
                             <input name="date" type="date" value={formData.date || ''} onChange={handleChange} className="w-full bg-gray-700 p-2 rounded"/>
-                             <select name="sourceBatchId" value={formData.sourceBatchId || ''} onChange={handleChange} className="w-full bg-gray-700 p-2 rounded">
+                            <select name="sourceBatchId" value={formData.sourceBatchId || ''} onChange={handleChange} className="w-full bg-gray-700 p-2 rounded">
                                 <option value="">-- Select Source Fermentation --</option>
                                 {fermentations.map(f => <option key={f.id} value={f.id}>{f.name} ({f.startDate})</option>)}
                             </select>
-                            <div className="grid grid-cols-2 gap-4">
-                                <input name="volumeIn" type="number" value={formData.volumeIn || ''} onChange={handleChange} placeholder="Volume In (gal)" className="w-full bg-gray-700 p-2 rounded"/>
-                                <input name="volumeOut" type="number" value={formData.volumeOut || ''} onChange={handleChange} placeholder="Volume Out (gal)" className="w-full bg-gray-700 p-2 rounded"/>
+                            
+                            {/* Distillation Charge Section */}
+                            <div className="border border-gray-600 rounded p-4 bg-gray-750">
+                                <h3 className="text-lg font-semibold text-blue-300 mb-3">Distillation Charge</h3>
+                                <div className="grid grid-cols-2 gap-4 mb-3">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-300 mb-1">Input Method</label>
+                                        <select 
+                                            value={chargeInputMethod} 
+                                            onChange={(e) => setChargeInputMethod(e.target.value)}
+                                            className="w-full bg-gray-700 p-2 rounded"
+                                        >
+                                            <option value="weight">Weight (lbs)</option>
+                                            <option value="wineGallons">Wine Gallons</option>
+                                            <option value="proofGallons">Proof Gallons</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-300 mb-1">Proof</label>
+                                        <input 
+                                            name="chargeProof" 
+                                            type="number" 
+                                            step="0.1" 
+                                            value={formData.chargeProof || ''} 
+                                            onChange={handleChange} 
+                                            placeholder="Charge Proof" 
+                                            className="w-full bg-gray-700 p-2 rounded"
+                                        />
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-2 gap-4 mb-3">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-300 mb-1">
+                                            {chargeInputMethod === 'weight' ? 'Weight (lbs)' : 
+                                             chargeInputMethod === 'wineGallons' ? 'Wine Gallons' : 'Proof Gallons'}
+                                        </label>
+                                        <input 
+                                            type="number" 
+                                            step="0.001"
+                                            value={chargeInputValue} 
+                                            onChange={(e) => setChargeInputValue(e.target.value)} 
+                                            placeholder={`Enter ${chargeInputMethod === 'weight' ? 'weight' : 
+                                                         chargeInputMethod === 'wineGallons' ? 'wine gallons' : 'proof gallons'}`}
+                                            className="w-full bg-gray-700 p-2 rounded"
+                                        />
+                                    </div>
+                                    <div className="flex flex-col justify-end">
+                                        <div className="text-sm text-gray-400">
+                                            <div>Net Weight: {chargeCalculated.netWeightLbs.toFixed(2)} lbs</div>
+                                            <div>Wine Gallons: {chargeCalculated.wineGallons.toFixed(3)} gal</div>
+                                            <div>Proof Gallons: {chargeCalculated.proofGallons.toFixed(3)} PG</div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                             <div className="grid grid-cols-2 gap-4">
-                                <input name="proofOut" type="number" step="0.1" value={formData.proofOut || ''} onChange={handleChange} placeholder="Output Proof" className="w-full bg-gray-700 p-2 rounded"/>
-                                <select name="productType" value={formData.productType || ''} onChange={handleChange} className="w-full bg-gray-700 p-2 rounded">
-                                     {products.map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
-                                </select>
+
+                            {/* Distillation Yield Section */}
+                            <div className="border border-gray-600 rounded p-4 bg-gray-750">
+                                <h3 className="text-lg font-semibold text-blue-300 mb-3">Distillation Yield</h3>
+                                <div className="grid grid-cols-2 gap-4 mb-3">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-300 mb-1">Input Method</label>
+                                        <select 
+                                            value={yieldInputMethod} 
+                                            onChange={(e) => setYieldInputMethod(e.target.value)}
+                                            className="w-full bg-gray-700 p-2 rounded"
+                                        >
+                                            <option value="weight">Weight (lbs)</option>
+                                            <option value="wineGallons">Wine Gallons</option>
+                                            <option value="proofGallons">Proof Gallons</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-300 mb-1">Proof</label>
+                                        <input 
+                                            name="yieldProof" 
+                                            type="number" 
+                                            step="0.1" 
+                                            value={formData.yieldProof || ''} 
+                                            onChange={handleChange} 
+                                            placeholder="Yield Proof" 
+                                            className="w-full bg-gray-700 p-2 rounded"
+                                        />
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-2 gap-4 mb-3">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-300 mb-1">
+                                            {yieldInputMethod === 'weight' ? 'Weight (lbs)' : 
+                                             yieldInputMethod === 'wineGallons' ? 'Wine Gallons' : 'Proof Gallons'}
+                                        </label>
+                                        <input 
+                                            type="number" 
+                                            step="0.001"
+                                            value={yieldInputValue} 
+                                            onChange={(e) => setYieldInputValue(e.target.value)} 
+                                            placeholder={`Enter ${yieldInputMethod === 'weight' ? 'weight' : 
+                                                         yieldInputMethod === 'wineGallons' ? 'wine gallons' : 'proof gallons'}`}
+                                            className="w-full bg-gray-700 p-2 rounded"
+                                        />
+                                    </div>
+                                    <div className="flex flex-col justify-end">
+                                        <div className="text-sm text-gray-400">
+                                            <div>Net Weight: {yieldCalculated.netWeightLbs.toFixed(2)} lbs</div>
+                                            <div>Wine Gallons: {yieldCalculated.wineGallons.toFixed(3)} gal</div>
+                                            <div>Proof Gallons: {yieldCalculated.proofGallons.toFixed(3)} PG</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                {/* Container Selection for Yield Storage */}
+                                {!isEdit && (
+                                    <div className="mt-4">
+                                        <label className="block text-sm font-medium text-gray-300 mb-2">Store Yield In Container</label>
+                                        <select 
+                                            value={selectedContainerId} 
+                                            onChange={(e) => setSelectedContainerId(e.target.value)}
+                                            className="w-full bg-gray-700 p-2 rounded"
+                                            required
+                                        >
+                                            <option value="">-- Select Empty Container --</option>
+                                            {emptyContainers.map(c => (
+                                                <option key={c.id} value={c.id}>{c.displayName}</option>
+                                            ))}
+                                        </select>
+                                        {emptyContainers.length === 0 && (
+                                            <p className="text-yellow-400 text-sm mt-1">No empty containers available. Please create an empty container first.</p>
+                                        )}
+                                    </div>
+                                )}
                             </div>
+
+                            <select name="productType" value={formData.productType || ''} onChange={handleChange} className="w-full bg-gray-700 p-2 rounded">
+                                {products.map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
+                            </select>
                         </>
                     )}
                     <textarea name="notes" value={formData.notes || ''} onChange={handleChange} placeholder="Notes..." rows="2" className="w-full bg-gray-700 p-2 rounded"/>
