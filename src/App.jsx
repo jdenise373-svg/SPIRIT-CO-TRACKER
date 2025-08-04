@@ -2087,7 +2087,10 @@ const ProductionList = ({ title, batches, onEdit, onDelete }) => (
                                 </>
                             ) : (
                                 <>
-                                    <p><strong>Source:</strong> {batch.sourceBatchName || 'N/A'}</p>
+                                    <p><strong>Source:</strong> {batch.sourceBatchName || (batch.sourceBatchId === 'storage_tank' ? 'Storage Tank' : 'N/A')}</p>
+                                    {batch.selectedStorageTankId && (
+                                        <p><strong>Pulled From:</strong> {batch.selectedStorageTankName || 'Storage Tank'}</p>
+                                    )}
                                     {batch.chargeCalculated && batch.chargeCalculated.proofGallons > 0 && (
                                         <p><strong>Charge:</strong> {batch.chargeCalculated.proofGallons.toFixed(3)} PG @ {batch.chargeProof} proof</p>
                                     )}
@@ -2122,6 +2125,9 @@ const AddEditProductionModal = ({ db, userId, appId, batch, type, fermentations,
     const [chargeCalculated, setChargeCalculated] = useState({ netWeightLbs: 0, wineGallons: 0, proofGallons: 0 });
     const [yieldCalculated, setYieldCalculated] = useState({ netWeightLbs: 0, wineGallons: 0, proofGallons: 0 });
     const [selectedContainerId, setSelectedContainerId] = useState('');
+    const [selectedStorageTankId, setSelectedStorageTankId] = useState('');
+    const [storageTankPullAmount, setStorageTankPullAmount] = useState('');
+    const [storageTankPullMethod, setStorageTankPullMethod] = useState('weight');
 
     // Get empty containers for yield storage
     const emptyContainers = useMemo(() => {
@@ -2130,6 +2136,17 @@ const AddEditProductionModal = ({ db, userId, appId, batch, type, fermentations,
             name: c.name,
             type: c.type,
             displayName: `${c.name} (${c.type.replace(/_/g, ' ')})`
+        }));
+    }, [inventory]);
+
+    // Get filled containers that can be used as storage tanks
+    const filledStorageTanks = useMemo(() => {
+        return inventory.filter(c => c.status === 'filled' && c.type !== 'still').map(c => ({
+            id: c.id,
+            name: c.name,
+            type: c.type,
+            displayName: `${c.name} (${c.type.replace(/_/g, ' ')}) - ${c.currentFill?.proofGallons?.toFixed(3)} PG`,
+            currentFill: c.currentFill
         }));
     }, [inventory]);
 
@@ -2162,6 +2179,9 @@ const AddEditProductionModal = ({ db, userId, appId, batch, type, fermentations,
                 if (batch.chargeInputValue) setChargeInputValue(batch.chargeInputValue);
                 if (batch.yieldInputValue) setYieldInputValue(batch.yieldInputValue);
                 if (batch.selectedContainerId) setSelectedContainerId(batch.selectedContainerId);
+                if (batch.selectedStorageTankId) setSelectedStorageTankId(batch.selectedStorageTankId);
+                if (batch.storageTankPullAmount) setStorageTankPullAmount(batch.storageTankPullAmount);
+                if (batch.storageTankPullMethod) setStorageTankPullMethod(batch.storageTankPullMethod);
             }
         }
     }, [batch, type]);
@@ -2185,6 +2205,32 @@ const AddEditProductionModal = ({ db, userId, appId, batch, type, fermentations,
             setChargeCalculated({ netWeightLbs: 0, wineGallons: 0, proofGallons: 0 });
         }
     }, [chargeInputValue, chargeInputMethod, formData.chargeProof]);
+
+    // Calculate storage tank pull amount
+    useEffect(() => {
+        if (selectedStorageTankId && storageTankPullAmount) {
+            const selectedTank = filledStorageTanks.find(t => t.id === selectedStorageTankId);
+            if (selectedTank && selectedTank.currentFill) {
+                const pullAmount = parseFloat(storageTankPullAmount) || 0;
+                const tankProof = selectedTank.currentFill.proof || 0;
+                
+                if (pullAmount > 0 && tankProof > 0) {
+                    let calculated;
+                    if (storageTankPullMethod === 'weight') {
+                        calculated = calculateDerivedValuesFromWeight(0, pullAmount, tankProof);
+                    } else if (storageTankPullMethod === 'wineGallons') {
+                        calculated = calculateDerivedValuesFromWineGallons(pullAmount, tankProof, 0);
+                    } else { // proofGallons
+                        calculated = calculateDerivedValuesFromProofGallons(pullAmount, tankProof, 0);
+                    }
+                    
+                    // Update charge calculations with the pulled amount
+                    setChargeCalculated(calculated);
+                    setFormData(prev => ({ ...prev, chargeProof: tankProof.toString() }));
+                }
+            }
+        }
+    }, [selectedStorageTankId, storageTankPullAmount, storageTankPullMethod, filledStorageTanks]);
 
     // Calculate yield values based on input method
     useEffect(() => {
@@ -2217,6 +2263,32 @@ const AddEditProductionModal = ({ db, userId, appId, batch, type, fermentations,
             setFormError('Please select a container to store the distillation yield.');
             return;
         }
+
+        // Validate storage tank pull amount
+        if (type === 'distillation' && formData.sourceBatchId === 'storage_tank' && selectedStorageTankId && storageTankPullAmount) {
+            const sourceTank = inventory.find(c => c.id === selectedStorageTankId);
+            if (sourceTank && sourceTank.status === 'filled' && sourceTank.currentFill) {
+                const pullAmount = parseFloat(storageTankPullAmount) || 0;
+                const tankProof = sourceTank.currentFill.proof || 0;
+                
+                if (pullAmount > 0 && tankProof > 0) {
+                    let pullCalculated;
+                    if (storageTankPullMethod === 'weight') {
+                        pullCalculated = calculateDerivedValuesFromWeight(0, pullAmount, tankProof);
+                    } else if (storageTankPullMethod === 'wineGallons') {
+                        pullCalculated = calculateDerivedValuesFromWineGallons(pullAmount, tankProof, 0);
+                    } else { // proofGallons
+                        pullCalculated = calculateDerivedValuesFromProofGallons(pullAmount, tankProof, 0);
+                    }
+
+                    // Check if pull amount exceeds available amount
+                    if (pullCalculated.proofGallons > sourceTank.currentFill.proofGallons + 0.001) {
+                        setFormError(`Cannot pull ${pullCalculated.proofGallons.toFixed(3)} PG from tank that only has ${sourceTank.currentFill.proofGallons.toFixed(3)} PG.`);
+                        return;
+                    }
+                }
+            }
+        }
         
         const dataToSave = { 
             ...formData, 
@@ -2228,6 +2300,9 @@ const AddEditProductionModal = ({ db, userId, appId, batch, type, fermentations,
                 yieldInputMethod,
                 yieldInputValue,
                 selectedContainerId,
+                selectedStorageTankId,
+                storageTankPullAmount,
+                storageTankPullMethod,
                 chargeCalculated,
                 yieldCalculated
             })
@@ -2299,6 +2374,61 @@ const AddEditProductionModal = ({ db, userId, appId, batch, type, fermentations,
                 }
             }
 
+            // Handle storage tank pull for distillation charge
+            if (type === 'distillation' && !isEdit && selectedStorageTankId && storageTankPullAmount) {
+                const sourceTank = inventory.find(c => c.id === selectedStorageTankId);
+                if (sourceTank && sourceTank.status === 'filled' && sourceTank.currentFill) {
+                    const pullAmount = parseFloat(storageTankPullAmount) || 0;
+                    const tankProof = sourceTank.currentFill.proof || 0;
+                    
+                    if (pullAmount > 0 && tankProof > 0) {
+                        let pullCalculated;
+                        if (storageTankPullMethod === 'weight') {
+                            pullCalculated = calculateDerivedValuesFromWeight(0, pullAmount, tankProof);
+                        } else if (storageTankPullMethod === 'wineGallons') {
+                            pullCalculated = calculateDerivedValuesFromWineGallons(pullAmount, tankProof, 0);
+                        } else { // proofGallons
+                            pullCalculated = calculateDerivedValuesFromProofGallons(pullAmount, tankProof, 0);
+                        }
+
+                        // Calculate remaining amounts in source tank
+                        const remainingNetWeight = Math.max(0, sourceTank.currentFill.netWeightLbs - pullCalculated.netWeightLbs);
+                        const remainingWineGallons = Math.max(0, sourceTank.currentFill.wineGallons - pullCalculated.wineGallons);
+                        const remainingProofGallons = Math.max(0, sourceTank.currentFill.proofGallons - pullCalculated.proofGallons);
+                        const remainingGrossWeight = sourceTank.tareWeightLbs + remainingNetWeight;
+
+                        // Update source tank
+                        const sourceTankRef = doc(db, `artifacts/${appId}/users/${userId}/spiritInventory`, selectedStorageTankId);
+                        const sourceTankUpdate = {
+                            currentFill: {
+                                ...sourceTank.currentFill,
+                                netWeightLbs: remainingNetWeight,
+                                wineGallons: remainingWineGallons,
+                                proofGallons: remainingProofGallons,
+                                grossWeightLbs: remainingGrossWeight,
+                                spiritDensity: pullCalculated.spiritDensity
+                            },
+                            status: remainingProofGallons > 0.001 ? 'filled' : 'empty'
+                        };
+                        batchRef.update(sourceTankRef, sourceTankUpdate);
+
+                        // Log storage tank pull
+                        const logCollRef = collection(db, `artifacts/${appId}/users/${userId}/transactionLog`);
+                        const pullLogData = {
+                            type: "TRANSFER_OUT",
+                            containerId: selectedStorageTankId,
+                            containerName: sourceTank.name,
+                            productType: sourceTank.currentFill.productType,
+                            proof: tankProof,
+                            netWeightLbsChange: -pullCalculated.netWeightLbs,
+                            proofGallonsChange: -pullCalculated.proofGallons,
+                            notes: `Pulled ${pullCalculated.proofGallons.toFixed(3)} PG for distillation batch ${dataToSave.name}.`
+                        };
+                        batchRef.set(doc(logCollRef), {...pullLogData, timestamp: serverTimestamp()});
+                    }
+                }
+            }
+
             await batchRef.commit();
             setErrorApp('');
             onClose();
@@ -2335,7 +2465,66 @@ const AddEditProductionModal = ({ db, userId, appId, batch, type, fermentations,
                             <select name="sourceBatchId" value={formData.sourceBatchId || ''} onChange={handleChange} className="w-full bg-gray-700 p-2 rounded">
                                 <option value="">-- Select Source Fermentation --</option>
                                 {fermentations.map(f => <option key={f.id} value={f.id}>{f.name} ({f.startDate})</option>)}
+                                <option value="storage_tank">Use Storage Tank</option>
                             </select>
+                            
+                            {/* Storage Tank Selection */}
+                            {formData.sourceBatchId === 'storage_tank' && (
+                                <div className="border border-gray-600 rounded p-4 bg-gray-750">
+                                    <h3 className="text-lg font-semibold text-blue-300 mb-3">Pull from Storage Tank</h3>
+                                    <div className="grid grid-cols-2 gap-4 mb-3">
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-300 mb-1">Select Tank</label>
+                                            <select 
+                                                value={selectedStorageTankId} 
+                                                onChange={(e) => setSelectedStorageTankId(e.target.value)}
+                                                className="w-full bg-gray-700 p-2 rounded"
+                                            >
+                                                <option value="">-- Select Filled Container --</option>
+                                                {filledStorageTanks.map(t => (
+                                                    <option key={t.id} value={t.id}>{t.displayName}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-300 mb-1">Pull Method</label>
+                                            <select 
+                                                value={storageTankPullMethod} 
+                                                onChange={(e) => setStorageTankPullMethod(e.target.value)}
+                                                className="w-full bg-gray-700 p-2 rounded"
+                                            >
+                                                <option value="weight">Weight (lbs)</option>
+                                                <option value="wineGallons">Wine Gallons</option>
+                                                <option value="proofGallons">Proof Gallons</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-300 mb-1">
+                                                {storageTankPullMethod === 'weight' ? 'Weight (lbs)' : 
+                                                 storageTankPullMethod === 'wineGallons' ? 'Wine Gallons' : 'Proof Gallons'}
+                                            </label>
+                                            <input 
+                                                type="number" 
+                                                step="0.001"
+                                                value={storageTankPullAmount} 
+                                                onChange={(e) => setStorageTankPullAmount(e.target.value)} 
+                                                placeholder={`Enter ${storageTankPullMethod === 'weight' ? 'weight' : 
+                                                             storageTankPullMethod === 'wineGallons' ? 'wine gallons' : 'proof gallons'} to pull`}
+                                                className="w-full bg-gray-700 p-2 rounded"
+                                            />
+                                        </div>
+                                        <div className="flex flex-col justify-end">
+                                            <div className="text-sm text-gray-400">
+                                                <div>Net Weight: {chargeCalculated.netWeightLbs.toFixed(2)} lbs</div>
+                                                <div>Wine Gallons: {chargeCalculated.wineGallons.toFixed(3)} gal</div>
+                                                <div>Proof Gallons: {chargeCalculated.proofGallons.toFixed(3)} PG</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
                             
                             {/* Distillation Charge Section */}
                             <div className="border border-gray-600 rounded p-4 bg-gray-750">
