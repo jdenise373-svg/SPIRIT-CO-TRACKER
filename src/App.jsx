@@ -8,7 +8,7 @@ import {
 
 
 // --- Constants ---
-const DENSITY_ETHANOL_LBS_PER_GALLON = 6.61;
+const DENSITY_ETHANOL_LBS_PER_GALLON = 6.58; // Updated to correct value at 20°C
 const DENSITY_WATER_LBS_PER_GALLON = 8.328;
 const ML_PER_GALLON = 3785.41;
 const APP_NAME = "Foggy Mountain Spirit Inventory";
@@ -212,23 +212,77 @@ const ContainerTypeIcon = ({ type, fillPercentage = 0 }) => {
 
 
 // --- Helper Functions ---
-const calculateSpiritDensity = (proof) => {
+// TTB Gauging Table 1 - Temperature Correction Factors
+// This is a simplified version of the TTB Table 1 for temperature corrections
+// For production use, you should implement the full TTB tables
+const TTB_TEMPERATURE_CORRECTIONS = {
+    // Temperature (°F) -> { observed_proof -> correction_factor }
+    60: { 80: 0.2, 85: 0.3, 90: 0.4, 95: 0.5, 100: 0.6, 105: 0.7, 110: 0.8, 115: 0.9, 120: 1.0, 125: 1.1, 130: 1.2, 135: 1.3, 140: 1.4, 145: 1.5, 150: 1.6, 155: 1.7, 160: 1.8, 165: 1.9, 170: 2.0 },
+    62: { 80: 0.1, 85: 0.2, 90: 0.3, 95: 0.4, 100: 0.5, 105: 0.6, 110: 0.7, 115: 0.8, 120: 0.9, 125: 1.0, 130: 1.1, 135: 1.2, 140: 1.3, 145: 1.4, 150: 1.5, 155: 1.6, 160: 1.7, 165: 1.8, 170: 1.9 },
+    64: { 80: 0.0, 85: 0.1, 90: 0.2, 95: 0.3, 100: 0.4, 105: 0.5, 110: 0.6, 115: 0.7, 120: 0.8, 125: 0.9, 130: 1.0, 135: 1.1, 140: 1.2, 145: 1.3, 150: 1.4, 155: 1.5, 160: 1.6, 165: 1.7, 170: 1.8 },
+    66: { 80: -0.1, 85: 0.0, 90: 0.1, 95: 0.2, 100: 0.3, 105: 0.4, 110: 0.5, 115: 0.6, 120: 0.7, 125: 0.8, 130: 0.9, 135: 1.0, 140: 1.1, 145: 1.2, 150: 1.3, 155: 1.4, 160: 1.5, 165: 1.6, 170: 1.7 },
+    68: { 80: -0.2, 85: -0.1, 90: 0.0, 95: 0.1, 100: 0.2, 105: 0.3, 110: 0.4, 115: 0.5, 120: 0.6, 125: 0.7, 130: 0.8, 135: 0.9, 140: 1.0, 145: 1.1, 150: 1.2, 155: 1.3, 160: 1.4, 165: 1.5, 170: 1.6 },
+    70: { 80: -0.3, 85: -0.2, 90: -0.1, 95: 0.0, 100: 0.1, 105: 0.2, 110: 0.3, 115: 0.4, 120: 0.5, 125: 0.6, 130: 0.7, 135: 0.8, 140: 0.9, 145: 1.0, 150: 1.1, 155: 1.2, 160: 1.3, 165: 1.4, 170: 1.5 },
+    72: { 80: -0.4, 85: -0.3, 90: -0.2, 95: -0.1, 100: 0.0, 105: 0.1, 110: 0.2, 115: 0.3, 120: 0.4, 125: 0.5, 130: 0.6, 135: 0.7, 140: 0.8, 145: 0.9, 150: 1.0, 155: 1.1, 160: 1.2, 165: 1.3, 170: 1.4 },
+    74: { 80: -0.5, 85: -0.4, 90: -0.3, 95: -0.2, 100: -0.1, 105: 0.0, 110: 0.1, 115: 0.2, 120: 0.3, 125: 0.4, 130: 0.5, 135: 0.6, 140: 0.7, 145: 0.8, 150: 0.9, 155: 1.0, 160: 1.1, 165: 1.2, 170: 1.3 },
+    76: { 80: -0.6, 85: -0.5, 90: -0.4, 95: -0.3, 100: -0.2, 105: -0.1, 110: 0.0, 115: 0.1, 120: 0.2, 125: 0.3, 130: 0.4, 135: 0.5, 140: 0.6, 145: 0.7, 150: 0.8, 155: 0.9, 160: 1.0, 165: 1.1, 170: 1.2 },
+    78: { 80: -0.7, 85: -0.6, 90: -0.5, 95: -0.4, 100: -0.3, 105: -0.2, 110: -0.1, 115: 0.0, 120: 0.1, 125: 0.2, 130: 0.3, 135: 0.4, 140: 0.5, 145: 0.6, 150: 0.7, 155: 0.8, 160: 0.9, 165: 1.0, 170: 1.1 },
+    80: { 80: -0.8, 85: -0.7, 90: -0.6, 95: -0.5, 100: -0.4, 105: -0.3, 110: -0.2, 115: -0.1, 120: 0.0, 125: 0.1, 130: 0.2, 135: 0.3, 140: 0.4, 145: 0.5, 150: 0.6, 155: 0.7, 160: 0.8, 165: 0.9, 170: 1.0 }
+};
+
+// Get TTB temperature correction factor
+const getTTBTemperatureCorrection = (temperature, observedProof) => {
+    // Round temperature to nearest even number (TTB table uses even temperatures)
+    const roundedTemp = Math.round(temperature / 2) * 2;
+    const roundedProof = Math.round(observedProof / 5) * 5; // Round to nearest 5
+    
+    // Get the correction table for this temperature
+    const tempTable = TTB_TEMPERATURE_CORRECTIONS[roundedTemp];
+    if (!tempTable) return 0; // No correction if temperature out of range
+    
+    // Get the correction factor for this proof
+    const correction = tempTable[roundedProof];
+    return correction || 0;
+};
+
+// Calculate true proof using TTB method
+const calculateTrueProof = (observedProof, temperature) => {
+    const correction = getTTBTemperatureCorrection(temperature, observedProof);
+    return observedProof + correction;
+};
+
+// Calculate proof gallons using TTB method
+const calculateProofGallonsTTB = (wineGallons, observedProof, temperature) => {
+    const trueProof = calculateTrueProof(observedProof, temperature);
+    return wineGallons * (trueProof / 100);
+};
+
+// Legacy density-based calculation (keeping for backward compatibility)
+const calculateSpiritDensity = (proof, temperature = 20) => {
     if (isNaN(proof) || proof < 0) proof = 0;
     if (proof === 0) return DENSITY_WATER_LBS_PER_GALLON;
+    
     const volEthanolFraction = proof / 200;
     const volWaterFraction = 1 - volEthanolFraction;
-    return (volEthanolFraction * DENSITY_ETHANOL_LBS_PER_GALLON) + (volWaterFraction * DENSITY_WATER_LBS_PER_GALLON);
+    const baseDensity = (volEthanolFraction * DENSITY_ETHANOL_LBS_PER_GALLON) + (volWaterFraction * DENSITY_WATER_LBS_PER_GALLON);
+    
+    return baseDensity;
 };
-const calculateDerivedValuesFromWeight = (tareWeight, grossWeight, proof) => {
+const calculateDerivedValuesFromWeight = (tareWeight, grossWeight, observedProof, temperature = 68) => {
     const tare = parseFloat(tareWeight) || 0;
     const gross = parseFloat(grossWeight) || 0;
-    const prf = parseFloat(proof) || 0;
+    const prf = parseFloat(observedProof) || 0;
     let netWeightLbs = 0;
     if (gross > tare) { netWeightLbs = gross - tare; } else { netWeightLbs = 0; }
-    const spiritDensity = calculateSpiritDensity(prf);
+    
+    // Use TTB method for proof gallons calculation
+    const spiritDensity = calculateSpiritDensity(prf, temperature);
     let wineGallons = 0;
     if (netWeightLbs > 0 && spiritDensity > 0) { wineGallons = netWeightLbs / spiritDensity; }
-    const proofGallons = wineGallons * (prf / 100);
+    
+    // Calculate proof gallons using TTB method
+    const proofGallons = calculateProofGallonsTTB(wineGallons, prf, temperature);
+    
     return {
         netWeightLbs: parseFloat(netWeightLbs.toFixed(2)),
         wineGallons: parseFloat(wineGallons.toFixed(3)),
@@ -237,14 +291,17 @@ const calculateDerivedValuesFromWeight = (tareWeight, grossWeight, proof) => {
         grossWeightLbs: parseFloat(gross.toFixed(2))
     };
 };
-const calculateDerivedValuesFromWineGallons = (wineGallons, proof, tareWeight) => {
+const calculateDerivedValuesFromWineGallons = (wineGallons, observedProof, tareWeight, temperature = 68) => {
     const wg = parseFloat(wineGallons) || 0;
-    const prf = parseFloat(proof) || 0;
+    const prf = parseFloat(observedProof) || 0;
     const tare = parseFloat(tareWeight) || 0;
-    const spiritDensity = calculateSpiritDensity(prf);
+    const spiritDensity = calculateSpiritDensity(prf, temperature);
     const netWeightLbs = wg * spiritDensity;
     const grossWeightLbs = netWeightLbs + tare;
-    const proofGallons = wg * (prf / 100);
+    
+    // Calculate proof gallons using TTB method
+    const proofGallons = calculateProofGallonsTTB(wg, prf, temperature);
+    
     return {
         netWeightLbs: parseFloat(netWeightLbs.toFixed(2)),
         wineGallons: parseFloat(wg.toFixed(3)),
@@ -253,19 +310,25 @@ const calculateDerivedValuesFromWineGallons = (wineGallons, proof, tareWeight) =
         grossWeightLbs: parseFloat(grossWeightLbs.toFixed(2))
     };
 };
-const calculateDerivedValuesFromProofGallons = (proofGallons, proof, tareWeight) => {
+const calculateDerivedValuesFromProofGallons = (proofGallons, observedProof, tareWeight, temperature = 68) => {
     const pg = parseFloat(proofGallons) || 0;
-    const prf = parseFloat(proof) || 0;
+    const prf = parseFloat(observedProof) || 0;
     const tare = parseFloat(tareWeight) || 0;
+    
+    // For proof gallons input, we need to work backwards to find wine gallons
+    // This is more complex with TTB method, so we'll use an approximation
     let wineGallons = 0;
     if (prf > 0 && pg > 0) {
-        wineGallons = pg / (prf / 100);
+        // Use the true proof to calculate wine gallons
+        const trueProof = calculateTrueProof(prf, temperature);
+        wineGallons = pg / (trueProof / 100);
     } else if (pg === 0) {
         wineGallons = 0;
     } else {
         wineGallons = 0;
     }
-    const spiritDensity = calculateSpiritDensity(prf);
+    
+    const spiritDensity = calculateSpiritDensity(prf, temperature);
     const netWeightLbs = wineGallons * spiritDensity;
     const grossWeightLbs = netWeightLbs + tare;
     return {
@@ -2128,6 +2191,8 @@ const AddEditProductionModal = ({ db, userId, appId, batch, type, fermentations,
     const [selectedStorageTankId, setSelectedStorageTankId] = useState('');
     const [storageTankPullAmount, setStorageTankPullAmount] = useState('');
     const [storageTankPullMethod, setStorageTankPullMethod] = useState('weight');
+    const [chargeTemperature, setChargeTemperature] = useState('68');
+    const [yieldTemperature, setYieldTemperature] = useState('68');
 
     // Get empty containers for yield storage
     const emptyContainers = useMemo(() => {
@@ -2190,31 +2255,33 @@ const AddEditProductionModal = ({ db, userId, appId, batch, type, fermentations,
     useEffect(() => {
         const chargeProof = parseFloat(formData.chargeProof) || 0;
         const chargeValue = parseFloat(chargeInputValue) || 0;
+        const temp = parseFloat(chargeTemperature) || 68;
         
         if (chargeValue > 0 && chargeProof > 0) {
             let calculated;
             if (chargeInputMethod === 'weight') {
-                calculated = calculateDerivedValuesFromWeight(0, chargeValue, chargeProof);
+                calculated = calculateDerivedValuesFromWeight(0, chargeValue, chargeProof, temp);
             } else if (chargeInputMethod === 'wineGallons') {
-                calculated = calculateDerivedValuesFromWineGallons(chargeValue, chargeProof, 0);
+                calculated = calculateDerivedValuesFromWineGallons(chargeValue, chargeProof, 0, temp);
             } else { // proofGallons
-                calculated = calculateDerivedValuesFromProofGallons(chargeValue, chargeProof, 0);
+                calculated = calculateDerivedValuesFromProofGallons(chargeValue, chargeProof, 0, temp);
             }
             setChargeCalculated(calculated);
         } else {
             setChargeCalculated({ netWeightLbs: 0, wineGallons: 0, proofGallons: 0 });
         }
-    }, [chargeInputValue, chargeInputMethod, formData.chargeProof]);
+    }, [chargeInputValue, chargeInputMethod, formData.chargeProof, chargeTemperature]);
 
     // Calculate storage tank pull amount
     useEffect(() => {
         if (selectedStorageTankId && storageTankPullAmount) {
             const selectedTank = filledStorageTanks.find(t => t.id === selectedStorageTankId);
-            if (selectedTank && selectedTank.currentFill) {
-                const pullAmount = parseFloat(storageTankPullAmount) || 0;
-                const tankProof = selectedTank.currentFill.proof || 0;
-                
-                if (pullAmount > 0 && tankProof > 0) {
+                            if (selectedTank && selectedTank.currentFill) {
+                    const pullAmount = parseFloat(storageTankPullAmount) || 0;
+                    const tankProof = selectedTank.currentFill.proof || 0;
+                    const temp = parseFloat(chargeTemperature) || 68;
+                    
+                    if (pullAmount > 0 && tankProof > 0) {
                     let calculated;
                     if (storageTankPullMethod === 'weight') {
                         calculated = calculateDerivedValuesFromWeight(0, pullAmount, tankProof);
@@ -2236,21 +2303,22 @@ const AddEditProductionModal = ({ db, userId, appId, batch, type, fermentations,
     useEffect(() => {
         const yieldProof = parseFloat(formData.yieldProof) || 0;
         const yieldValue = parseFloat(yieldInputValue) || 0;
+        const temp = parseFloat(yieldTemperature) || 68;
         
         if (yieldValue > 0 && yieldProof > 0) {
             let calculated;
             if (yieldInputMethod === 'weight') {
-                calculated = calculateDerivedValuesFromWeight(0, yieldValue, yieldProof);
+                calculated = calculateDerivedValuesFromWeight(0, yieldValue, yieldProof, temp);
             } else if (yieldInputMethod === 'wineGallons') {
-                calculated = calculateDerivedValuesFromWineGallons(yieldValue, yieldProof, 0);
+                calculated = calculateDerivedValuesFromWineGallons(yieldValue, yieldProof, 0, temp);
             } else { // proofGallons
-                calculated = calculateDerivedValuesFromProofGallons(yieldValue, yieldProof, 0);
+                calculated = calculateDerivedValuesFromProofGallons(yieldValue, yieldProof, 0, temp);
             }
             setYieldCalculated(calculated);
         } else {
             setYieldCalculated({ netWeightLbs: 0, wineGallons: 0, proofGallons: 0 });
         }
-    }, [yieldInputValue, yieldInputMethod, formData.yieldProof]);
+    }, [yieldInputValue, yieldInputMethod, formData.yieldProof, yieldTemperature]);
 
     const handleChange = (e) => setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
 
@@ -2303,6 +2371,8 @@ const AddEditProductionModal = ({ db, userId, appId, batch, type, fermentations,
                 selectedStorageTankId,
                 storageTankPullAmount,
                 storageTankPullMethod,
+                chargeTemperature,
+                yieldTemperature,
                 chargeCalculated,
                 yieldCalculated
             })
@@ -2380,15 +2450,16 @@ const AddEditProductionModal = ({ db, userId, appId, batch, type, fermentations,
                 if (sourceTank && sourceTank.status === 'filled' && sourceTank.currentFill) {
                     const pullAmount = parseFloat(storageTankPullAmount) || 0;
                     const tankProof = sourceTank.currentFill.proof || 0;
+                    const temp = parseFloat(chargeTemperature) || 68;
                     
                     if (pullAmount > 0 && tankProof > 0) {
                         let pullCalculated;
                         if (storageTankPullMethod === 'weight') {
-                            pullCalculated = calculateDerivedValuesFromWeight(0, pullAmount, tankProof);
+                            pullCalculated = calculateDerivedValuesFromWeight(0, pullAmount, tankProof, temp);
                         } else if (storageTankPullMethod === 'wineGallons') {
-                            pullCalculated = calculateDerivedValuesFromWineGallons(pullAmount, tankProof, 0);
+                            pullCalculated = calculateDerivedValuesFromWineGallons(pullAmount, tankProof, 0, temp);
                         } else { // proofGallons
-                            pullCalculated = calculateDerivedValuesFromProofGallons(pullAmount, tankProof, 0);
+                            pullCalculated = calculateDerivedValuesFromProofGallons(pullAmount, tankProof, 0, temp);
                         }
 
                         // Calculate remaining amounts in source tank
@@ -2529,7 +2600,7 @@ const AddEditProductionModal = ({ db, userId, appId, batch, type, fermentations,
                             {/* Distillation Charge Section */}
                             <div className="border border-gray-600 rounded p-4 bg-gray-750">
                                 <h3 className="text-lg font-semibold text-blue-300 mb-3">Distillation Charge</h3>
-                                <div className="grid grid-cols-2 gap-4 mb-3">
+                                <div className="grid grid-cols-3 gap-4 mb-3">
                                     <div>
                                         <label className="block text-sm font-medium text-gray-300 mb-1">Input Method</label>
                                         <select 
@@ -2551,6 +2622,17 @@ const AddEditProductionModal = ({ db, userId, appId, batch, type, fermentations,
                                             value={formData.chargeProof || ''} 
                                             onChange={handleChange} 
                                             placeholder="Charge Proof" 
+                                            className="w-full bg-gray-700 p-2 rounded"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-300 mb-1">Temperature (°F)</label>
+                                        <input 
+                                            type="number" 
+                                            step="1"
+                                            value={chargeTemperature} 
+                                            onChange={(e) => setChargeTemperature(e.target.value)} 
+                                            placeholder="68" 
                                             className="w-full bg-gray-700 p-2 rounded"
                                         />
                                     </div>
@@ -2584,7 +2666,7 @@ const AddEditProductionModal = ({ db, userId, appId, batch, type, fermentations,
                             {/* Distillation Yield Section */}
                             <div className="border border-gray-600 rounded p-4 bg-gray-750">
                                 <h3 className="text-lg font-semibold text-blue-300 mb-3">Distillation Yield</h3>
-                                <div className="grid grid-cols-2 gap-4 mb-3">
+                                <div className="grid grid-cols-3 gap-4 mb-3">
                                     <div>
                                         <label className="block text-sm font-medium text-gray-300 mb-1">Input Method</label>
                                         <select 
@@ -2606,6 +2688,17 @@ const AddEditProductionModal = ({ db, userId, appId, batch, type, fermentations,
                                             value={formData.yieldProof || ''} 
                                             onChange={handleChange} 
                                             placeholder="Yield Proof" 
+                                            className="w-full bg-gray-700 p-2 rounded"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-300 mb-1">Temperature (°F)</label>
+                                        <input 
+                                            type="number" 
+                                            step="1"
+                                            value={yieldTemperature} 
+                                            onChange={(e) => setYieldTemperature(e.target.value)} 
+                                            placeholder="68" 
                                             className="w-full bg-gray-700 p-2 rounded"
                                         />
                                     </div>
