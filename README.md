@@ -29,9 +29,10 @@ A comprehensive inventory and production tracking system for distilleries and sp
 
 ### User Management
 
-- **Firebase Authentication**: Secure user login and registration
+- **Firebase Authentication**: Secure user login and registration with dedicated AuthScreen component
 - **Multi-user Support**: Support for multiple user accounts
 - **Account Management**: Change account settings and preferences
+- **Separated Auth UI**: Clean authentication interface isolated from main application logic
 
 ### Data Management
 
@@ -98,13 +99,32 @@ src/
 ├── assets/            # Static assets
 ├── icons/             # Icon components
 ├── App.jsx            # Main application component
+├── AuthScreen.jsx     # Authentication screen component
 ├── Firebase.js        # Firebase configuration
 └── main.jsx          # Application entry point
 ```
 
-## 🔧 Configuration
+## 🏛️ Architecture
 
-### Firebase Setup
+### Component Structure
+
+The application follows a modular architecture with clear separation of concerns:
+
+- **App.jsx**: Main application component handling data fetching, state management, and routing
+- **AuthScreen.jsx**: Dedicated authentication component with login/signup functionality
+- **Dashboard.jsx**: Overview and summary statistics
+- **InventoryItem.jsx**: Individual container display and management
+- **ProductionView.jsx**: Production batch tracking interface
+- **Modal Components**: Specialized modals for various operations (containers, transfers, bottling, etc.)
+
+### State Management
+
+- Firebase Firestore for real-time data persistence
+- React hooks for local state management
+- Firebase Authentication for user management
+- Real-time listeners for live data updates
+
+## 🔧 Configuration
 
 1. Create a new Firebase project
 2. Enable Authentication (Email/Password)
