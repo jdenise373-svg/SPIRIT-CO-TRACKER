@@ -1,0 +1,34 @@
+import { useState, useEffect } from "react";
+import { writeBatch } from "firebase/firestore";
+import { doc } from "firebase/firestore";
+import { calculateSpiritDensity, calculateDerivedValuesFromWeight, logTransaction } from "../../utils/helpers";
+
+// --- TransferModal ---
+export const TransferModal = ({ db, userId, appId, sourceContainer, allContainers, onClose, setErrorApp }) => {
+  const [destinationId, setDestinationId] = useState(''); const [transferWeightNet, setTransferWeightNet] = useState(false); const [transferAll, setTransferAll] = useState(false); const [formError, setFormError] = useState('');
+  const availableDestinations = allContainers.filter(c => c.id !== sourceContainer.id && c.status === 'empty');
+  const sourceMaxNet = sourceContainer.currentFill?.netWeightLbs || 0; const sourceProof = sourceContainer.currentFill?.proof || 0; const sourceProductType = sourceContainer.currentFill?.productType || "Unspecified Spirit";
+  useEffect(() => { if (transferAll) setTransferWeightNet(sourceMaxNet.toString()); }, [transferAll, sourceMaxNet]);
+  const handleTransfer = async () => { setFormError(''); const netToTransfer = parseFloat(transferWeightNet); if (!destinationId) { setFormError("Select destination."); return; } if (isNaN(netToTransfer) || netToTransfer <= 0) { setFormError("Valid transfer weight required."); return; } if (netToTransfer > sourceMaxNet + 0.001) { setFormError(`Cannot transfer > ${sourceMaxNet.toFixed(2)} lbs.`); return; } const destContainerData = allContainers.find(c => c.id === destinationId); if (!destContainerData || destContainerData.status !== 'empty') { setFormError("Invalid destination."); return; }
+      try { const batch = writeBatch(db); const sourceRef = doc(db, `artifacts/${appId}/users/${userId}/spiritInventory`, sourceContainer.id); const destRef = doc(db, `artifacts/${appId}/users/${userId}/spiritInventory`, destinationId);
+          const sourceSpiritDensity = calculateSpiritDensity(sourceProof);
+          const wgTransferred = sourceSpiritDensity > 0 ? netToTransfer / sourceSpiritDensity : 0;
+          const pgTransferred = wgTransferred * (sourceProof / 100);
+
+          const newSrcGrossNum = (parseFloat(sourceContainer.currentFill.grossWeightLbs) || parseFloat(sourceContainer.tareWeightLbs) || 0) - netToTransfer;
+          const srcCalcs = calculateDerivedValuesFromWeight(parseFloat(sourceContainer.tareWeightLbs) || 0, newSrcGrossNum, sourceProof);
+          let srcStatus = 'filled', srcEmptiedDate = null, finalSrcProof = sourceProof;
+          if (srcCalcs.netWeightLbs <= 0.001) { srcStatus = 'empty'; srcEmptiedDate = new Date().toISOString().split('T')[0]; finalSrcProof = 0; Object.assign(srcCalcs, calculateDerivedValuesFromWeight(parseFloat(sourceContainer.tareWeightLbs) || 0, parseFloat(sourceContainer.tareWeightLbs) || 0, 0));}
+
+          batch.update(sourceRef, { status: srcStatus, "currentFill.grossWeightLbs": srcCalcs.grossWeightLbs, "currentFill.proof": finalSrcProof, "currentFill.netWeightLbs": srcCalcs.netWeightLbs, "currentFill.wineGallons": srcCalcs.wineGallons, "currentFill.proofGallons": srcCalcs.proofGallons, "currentFill.emptiedDate": srcEmptiedDate, "currentFill.spiritDensity": srcCalcs.spiritDensity });
+          logTransaction(db, userId, appId, {type: "TRANSFER_OUT", containerId: sourceContainer.id, containerName: sourceContainer.name, productType: sourceProductType, proof: sourceProof, netWeightLbsChange: -netToTransfer, proofGallonsChange: -pgTransferred, destinationContainerId: destinationId, destinationContainerName: destContainerData.name, notes: `To ${destContainerData.name}` });
+
+          const newDestGrossNum = (parseFloat(destContainerData.tareWeightLbs) || 0) + netToTransfer;
+          const destCalcs = calculateDerivedValuesFromWeight(parseFloat(destContainerData.tareWeightLbs) || 0, newDestGrossNum, sourceProof);
+          batch.update(destRef, { status: 'filled', "currentFill.productType": sourceProductType, "currentFill.fillDate": new Date().toISOString().split('T')[0], "currentFill.grossWeightLbs": destCalcs.grossWeightLbs, "currentFill.proof": sourceProof, "currentFill.netWeightLbs": destCalcs.netWeightLbs, "currentFill.wineGallons": destCalcs.wineGallons, "currentFill.proofGallons": destCalcs.proofGallons, "currentFill.spiritDensity": destCalcs.spiritDensity, "currentFill.account": sourceContainer.currentFill?.account || 'storage', "currentFill.emptiedDate": null });
+          logTransaction(db, userId, appId, {type: "TRANSFER_IN", containerId: destinationId, containerName: destContainerData.name, productType: sourceProductType, proof: sourceProof, netWeightLbsChange: netToTransfer, proofGallonsChange: pgTransferred, sourceContainerId: sourceContainer.id, sourceContainerName: sourceContainer.name, notes: `From ${sourceContainer.name}` });
+
+          await batch.commit(); setErrorApp(''); onClose();
+      } catch (err) { console.error("Transfer error: ", err); setFormError("Transfer failed: " + err.message); setErrorApp("Transfer failed."); }};
+  return ( <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-50"><div className="bg-gray-800 p-6 rounded-lg shadow-xl w-full max-w-md"><h2 className="text-xl font-semibold mb-4 text-blue-300">Transfer From: {sourceContainer.name}</h2><p className="text-sm text-gray-400 mb-1">({sourceProductType}) Available: {sourceMaxNet.toFixed(2)} lbs at {sourceProof} proof.</p>{formError && <div className="bg-red-600 p-2 rounded mb-3 text-sm">{formError}</div>}<div className="space-y-4"><select value={destinationId} onChange={(e) => setDestinationId(e.target.value)} className="w-full bg-gray-700 p-2 rounded mt-1"><option value="">-- Select Empty Destination --</option>{availableDestinations.map(c => <option key={c.id} value={c.id}>{c.name} (Tare: {c.tareWeightLbs} lbs)</option>)}</select><input type="number" value={transferWeightNet} onChange={(e) => {setTransferWeightNet(e.target.value); if(transferAll) setTransferAll(false);}} disabled={transferAll} step="0.01" min="0.01" placeholder="Net Lbs to Transfer" className="w-full bg-gray-700 p-2 rounded mt-1 disabled:bg-gray-600"/><div className="flex items-center"><input type="checkbox" id="transferAll" checked={transferAll} onChange={(e) => setTransferAll(e.target.checked)} className="mr-2 h-4 w-4 text-blue-500 border-gray-600 rounded focus:ring-blue-500"/><label htmlFor="transferAll" className="text-sm text-gray-300">Transfer All</label></div><div className="flex justify-end space-x-3 pt-3"><button type="button" onClick={onClose} className="bg-gray-600 py-2 px-4 rounded">Cancel</button><button onClick={handleTransfer} className="bg-purple-600 py-2 px-4 rounded">Confirm Transfer</button></div></div></div></div>);
+};
