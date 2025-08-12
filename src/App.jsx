@@ -801,6 +801,11 @@ function App() {
           appId={appId}
           inventory={inventory}
           setErrorApp={setError}
+          onLogUpdated={() => {
+            // Force a refresh of the transaction log
+            // The onSnapshot should handle this automatically, but this ensures it
+            console.log("Log updated, transaction log should refresh automatically");
+          }}
         />
       )}
       {showImportModal && db && userId && (

@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { writeBatch, doc, collection, serverTimestamp } from "firebase/firestore";
+import { useState, useEffect, useRef } from "react";
+import { writeBatch, doc, collection, serverTimestamp, deleteDoc } from "firebase/firestore";
 import { convertToCSV, downloadCSV } from "../../utils/helpers";
 import { TRANSACTION_TYPES, UNDOABLE_TRANSACTION_TYPES } from "../../constants";
 
@@ -12,13 +12,34 @@ export const ViewLogModal = ({
   userId, 
   appId, 
   inventory,
-  setErrorApp 
+  setErrorApp,
+  onLogUpdated 
 }) => {
   const [isUndoing, setIsUndoing] = useState(false);
   const [undoingTransactionId, setUndoingTransactionId] = useState(null);
   const [showUndoConfirm, setShowUndoConfirm] = useState(false);
   const [transactionToUndo, setTransactionToUndo] = useState(null);
   const [undoSuccess, setUndoSuccess] = useState(false);
+  const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
+  const [transactionToRemove, setTransactionToRemove] = useState(null);
+  const [removeSuccess, setRemoveSuccess] = useState(false);
+  const [openMenuId, setOpenMenuId] = useState(null);
+  const menuRef = useRef(null);
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      // Close menu when clicking outside the table or on other elements
+      if (!event.target.closest('.transaction-table')) {
+        setOpenMenuId(null);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   const handleExportLog = () => {
     const headers = [
@@ -178,12 +199,51 @@ export const ViewLogModal = ({
       // Auto-hide success message after 3 seconds
       setTimeout(() => setUndoSuccess(false), 3000);
       
+      // Notify parent component to refresh the transaction log
+      if (onLogUpdated) {
+        onLogUpdated();
+      }
+      
     } catch (err) {
       console.error("Undo error:", err);
       setErrorApp(`Undo failed: ${err.message}`);
     } finally {
       setIsUndoing(false);
       setUndoingTransactionId(null);
+    }
+  };
+
+  const handleRemoveLog = async (transaction) => {
+    if (!db || !userId || !appId) {
+      setErrorApp("Database connection required for remove operation.");
+      return;
+    }
+
+    if (!transaction.id) {
+      setErrorApp("Cannot remove log entry: missing transaction ID");
+      return;
+    }
+
+    try {
+      // Simply delete the log entry without affecting container state
+      const logRef = doc(db, `artifacts/${appId}/users/${userId}/transactionLog`, transaction.id);
+      await deleteDoc(logRef);
+      
+      setErrorApp("");
+      setRemoveSuccess(true);
+      
+      // Auto-hide success message after 3 seconds
+      setTimeout(() => setRemoveSuccess(false), 3000);
+      
+      // Notify parent component to refresh the transaction log
+      if (onLogUpdated) {
+        onLogUpdated();
+      }
+      
+    } catch (err) {
+      console.error("Remove log error:", err);
+      console.error("Transaction details:", transaction);
+      setErrorApp(`Remove failed: ${err.message}`);
     }
   };
 
@@ -441,9 +501,6 @@ export const ViewLogModal = ({
             and proof adjustments ({TRANSACTION_TYPES.PROOF_DOWN}). 
             Undoing will restore the container to its previous state and completely remove the original transaction from the log.
           </p>
-          <p className="text-xs text-blue-300 mt-2">
-            <strong>Note:</strong> After undoing, the original transaction is permanently deleted with no audit trail. This action cannot be undone.
-          </p>
         </div>
         {isLoadingLog && (
           <div className="flex-1 flex items-center justify-center">
@@ -457,6 +514,13 @@ export const ViewLogModal = ({
             </p>
           </div>
         )}
+        {removeSuccess && (
+          <div className="mx-6 mt-4 p-4 bg-blue-900 bg-opacity-30 border border-blue-700 rounded-lg">
+            <p className="text-sm text-blue-200">
+              ✅ Log entry successfully removed!
+            </p>
+          </div>
+        )}
         {!isLoadingLog && transactionLog.length === 0 && (
           <div className="flex-1 flex items-center justify-center">
             <p className="text-xl text-gray-400">
@@ -467,7 +531,7 @@ export const ViewLogModal = ({
         {!isLoadingLog && transactionLog.length > 0 && (
           <div className="flex-1 mx-6 mb-6 overflow-hidden">
             <div className="h-full overflow-x-auto overflow-y-auto rounded-md border border-gray-700 scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800">
-              <table className="min-w-full divide-y divide-gray-700 text-sm">
+              <table className="min-w-full divide-y divide-gray-700 text-sm transaction-table">
               <thead className="bg-gray-750 sticky top-0 z-10">
                 <tr>
                   {[
@@ -492,7 +556,16 @@ export const ViewLogModal = ({
               </thead>
               <tbody className="bg-gray-800 divide-y divide-gray-700">
                 {transactionLog.map((log) => (
-                  <tr key={log.id} className="hover:bg-gray-700">
+                  <tr 
+                    key={log.id} 
+                    className="hover:bg-gray-700"
+                    onClick={() => {
+                      // Close any open menu when clicking on table rows
+                      if (openMenuId && openMenuId !== log.id) {
+                        setOpenMenuId(null);
+                      }
+                    }}
+                  >
                     <td className="px-6 py-3 whitespace-nowrap text-gray-400">
                       {log.timestamp?.toDate
                         ? log.timestamp.toDate().toLocaleString()
@@ -563,30 +636,64 @@ export const ViewLogModal = ({
                       {log.notes && <span> {log.notes}</span>}
                     </td>
                     <td className="px-6 py-3 whitespace-nowrap">
-                      {canUndoTransaction(log) ? (
+                      <div className="relative" ref={menuRef}>
                         <button
                           onClick={() => {
-                            setTransactionToUndo(log);
-                            setShowUndoConfirm(true);
+                            // Toggle menu for this specific row
+                            setOpenMenuId(openMenuId === log.id ? null : log.id);
                           }}
-                          disabled={isUndoing}
-                          className={`px-4 py-2 text-sm rounded font-medium ${
-                            isUndoing && undoingTransactionId === log.id
-                              ? "bg-gray-500 cursor-not-allowed"
-                              : "bg-red-600 hover:bg-red-700"
-                          } text-white`}
-                          title={getUndoDescription(log)}
+                          className="px-3 py-2 text-xs rounded font-medium bg-gray-600 hover:bg-gray-700 text-white flex items-center space-x-1"
+                          title="Actions menu"
                         >
-                          {isUndoing && undoingTransactionId === log.id ? "Undoing..." : "Undo"}
+                          <span>Actions</span>
+                          <svg className="w-3 h-3 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                          </svg>
                         </button>
-                      ) : (
-                        <span 
-                          className="text-xs text-gray-500 cursor-help"
-                          title={getUndoReason(log)}
-                        >
-                          —
-                        </span>
-                      )}
+                        
+                        {/* Dropdown Menu */}
+                        {openMenuId === log.id && (
+                          <div className="absolute right-0 mt-1 w-48 bg-gray-700 rounded-md shadow-lg z-20 border border-gray-600">
+                            <div className="py-1">
+                              {canUndoTransaction(log) ? (
+                                <button
+                                  onClick={() => {
+                                    setOpenMenuId(null);
+                                    setTransactionToUndo(log);
+                                    setShowUndoConfirm(true);
+                                  }}
+                                  disabled={isUndoing}
+                                  className={`w-full text-left px-4 py-2 text-sm ${
+                                    isUndoing && undoingTransactionId === log.id
+                                      ? "text-gray-400 cursor-not-allowed"
+                                      : "text-red-300 hover:bg-gray-600"
+                                  }`}
+                                  title={getUndoDescription(log)}
+                                >
+                                  {isUndoing && undoingTransactionId === log.id ? "⏳ Undoing..." : "↩️ Undo"}
+                                </button>
+                              ) : (
+                                <div className="px-4 py-2 text-sm text-gray-500 cursor-help" title={getUndoReason(log)}>
+                                  ⚠️ Cannot Undo
+                                </div>
+                              )}
+                              
+                              <button
+                                onClick={() => {
+                                  setOpenMenuId(null);
+                                  console.log("Remove button clicked for log:", log);
+                                  setTransactionToRemove(log);
+                                  setShowRemoveConfirm(true);
+                                }}
+                                className="w-full text-left px-4 py-2 text-sm text-orange-300 hover:bg-gray-600"
+                                title="Remove this log entry (no container state changes)"
+                              >
+                                🗑️ Remove
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -626,6 +733,10 @@ export const ViewLogModal = ({
                 This will reverse the transaction, update the container's current state, 
                 and completely remove the original transaction from the log. This action cannot be undone.
               </p>
+              <p className="text-xs text-blue-300 mt-2">
+                <strong>💡 Tip:</strong> Use "Undo" when you want to reverse the actual transaction effects. 
+                Use "Remove" when you just want to delete the log entry without affecting containers. Both options are available in the Actions dropdown menu.
+              </p>
             </div>
             <div className="flex justify-end space-x-3">
               <button
@@ -646,6 +757,57 @@ export const ViewLogModal = ({
                 className="bg-red-600 py-2 px-4 rounded"
               >
                 Confirm Undo
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Remove Confirmation Modal */}
+      {showRemoveConfirm && transactionToRemove && (
+        <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center p-8 z-60">
+          <div className="bg-gray-800 p-8 rounded-lg shadow-2xl w-full max-w-lg">
+            <h3 className="text-lg font-semibold mb-4 text-orange-400">
+              Confirm Remove Log Entry
+            </h3>
+            <div className="mb-4">
+              <p className="text-sm text-gray-300 mb-2">
+                <strong>Type:</strong> {transactionToRemove.type}
+              </p>
+              <p className="text-sm text-gray-300 mb-2">
+                <strong>Container:</strong> {transactionToRemove.containerName}
+              </p>
+              <p className="text-sm text-gray-300 mb-2">
+                <strong>Date:</strong> {transactionToRemove.timestamp?.toDate ? transactionToRemove.timestamp.toDate().toLocaleString() : "N/A"}
+              </p>
+              <p className="text-sm text-orange-300 mt-3">
+                <strong>⚠️ Warning:</strong> This will permanently delete this log entry without affecting any container states. 
+                This is useful for cleaning up duplicate entries or correcting data entry errors.
+              </p>
+              <p className="text-sm text-gray-400 mt-2">
+                This action cannot be undone and will leave no audit trail of the removal.
+              </p>
+            </div>
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => {
+                  setShowRemoveConfirm(false);
+                  setTransactionToRemove(null);
+                }}
+                className="bg-gray-600 py-2 px-4 rounded"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  console.log("Confirming remove for transaction:", transactionToRemove);
+                  setShowRemoveConfirm(false);
+                  handleRemoveLog(transactionToRemove);
+                  setTransactionToRemove(null);
+                }}
+                className="bg-orange-600 py-2 px-4 rounded"
+              >
+                Confirm Remove
               </button>
             </div>
           </div>
