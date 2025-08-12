@@ -1,7 +1,8 @@
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 import { writeBatch, doc, collection, serverTimestamp, deleteDoc } from "firebase/firestore";
 import { convertToCSV, downloadCSV } from "../../utils/helpers";
 import { TRANSACTION_TYPES, UNDOABLE_TRANSACTION_TYPES } from "../../constants";
+import Button from "../ui/Button";
 
 // --- ViewLogModal ---
 export const ViewLogModal = ({ 
@@ -23,23 +24,6 @@ export const ViewLogModal = ({
   const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
   const [transactionToRemove, setTransactionToRemove] = useState(null);
   const [removeSuccess, setRemoveSuccess] = useState(false);
-  const [openMenuId, setOpenMenuId] = useState(null);
-  const menuRef = useRef(null);
-
-  // Close menu when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      // Close menu when clicking outside the table or on other elements
-      if (!event.target.closest('.transaction-table')) {
-        setOpenMenuId(null);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, []);
 
   const handleExportLog = () => {
     const headers = [
@@ -242,7 +226,6 @@ export const ViewLogModal = ({
       
     } catch (err) {
       console.error("Remove log error:", err);
-      console.error("Transaction details:", transaction);
       setErrorApp(`Remove failed: ${err.message}`);
     }
   };
@@ -484,18 +467,19 @@ export const ViewLogModal = ({
           <h2 className="text-3xl font-semibold text-blue-300">
             Transaction Log
           </h2>
-          <button
+          <Button
             onClick={handleExportLog}
-            className="bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-6 rounded-md shadow-md text-base"
+            variant="success"
+            size="lg"
           >
             Export Log CSV
-          </button>
+          </Button>
         </div>
         
         {/* Undo Information */}
         <div className="mx-6 mt-4 p-4 bg-blue-900 bg-opacity-30 border border-blue-700 rounded-lg">
           <p className="text-sm text-blue-200">
-            <strong>💡 Undo Feature:</strong> Transactions with red "Undo" buttons can be reversed. 
+            <strong>💡 Undo Feature:</strong> Transactions with red undo arrow (↩️) icons can be reversed. 
             This includes transfers ({TRANSACTION_TYPES.TRANSFER_IN}, {TRANSACTION_TYPES.TRANSFER_OUT}), 
             samples ({TRANSACTION_TYPES.SAMPLE_ADJUST}), bottling operations ({TRANSACTION_TYPES.BOTTLE_PARTIAL}, {TRANSACTION_TYPES.BOTTLE_EMPTY}, {TRANSACTION_TYPES.BOTTLING_GAIN}, {TRANSACTION_TYPES.BOTTLING_LOSS}), 
             and proof adjustments ({TRANSACTION_TYPES.PROOF_DOWN}). 
@@ -531,7 +515,7 @@ export const ViewLogModal = ({
         {!isLoadingLog && transactionLog.length > 0 && (
           <div className="flex-1 mx-6 mb-6 overflow-hidden">
             <div className="h-full overflow-x-auto overflow-y-auto rounded-md border border-gray-700 scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800">
-              <table className="min-w-full divide-y divide-gray-700 text-sm transaction-table">
+              <table className="min-w-full divide-y divide-gray-700 text-sm">
               <thead className="bg-gray-750 sticky top-0 z-10">
                 <tr>
                   {[
@@ -559,12 +543,6 @@ export const ViewLogModal = ({
                   <tr 
                     key={log.id} 
                     className="hover:bg-gray-700"
-                    onClick={() => {
-                      // Close any open menu when clicking on table rows
-                      if (openMenuId && openMenuId !== log.id) {
-                        setOpenMenuId(null);
-                      }
-                    }}
                   >
                     <td className="px-6 py-3 whitespace-nowrap text-gray-400">
                       {log.timestamp?.toDate
@@ -636,63 +614,49 @@ export const ViewLogModal = ({
                       {log.notes && <span> {log.notes}</span>}
                     </td>
                     <td className="px-6 py-3 whitespace-nowrap">
-                      <div className="relative" ref={menuRef}>
-                        <button
-                          onClick={() => {
-                            // Toggle menu for this specific row
-                            setOpenMenuId(openMenuId === log.id ? null : log.id);
-                          }}
-                          className="px-3 py-2 text-xs rounded font-medium bg-gray-600 hover:bg-gray-700 text-white flex items-center space-x-1"
-                          title="Actions menu"
-                        >
-                          <span>Actions</span>
-                          <svg className="w-3 h-3 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                          </svg>
-                        </button>
-                        
-                        {/* Dropdown Menu */}
-                        {openMenuId === log.id && (
-                          <div className="absolute right-0 mt-1 w-48 bg-gray-700 rounded-md shadow-lg z-20 border border-gray-600">
-                            <div className="py-1">
-                              {canUndoTransaction(log) ? (
-                                <button
-                                  onClick={() => {
-                                    setOpenMenuId(null);
-                                    setTransactionToUndo(log);
-                                    setShowUndoConfirm(true);
-                                  }}
-                                  disabled={isUndoing}
-                                  className={`w-full text-left px-4 py-2 text-sm ${
-                                    isUndoing && undoingTransactionId === log.id
-                                      ? "text-gray-400 cursor-not-allowed"
-                                      : "text-red-300 hover:bg-gray-600"
-                                  }`}
-                                  title={getUndoDescription(log)}
-                                >
-                                  {isUndoing && undoingTransactionId === log.id ? "⏳ Undoing..." : "↩️ Undo"}
-                                </button>
-                              ) : (
-                                <div className="px-4 py-2 text-sm text-gray-500 cursor-help" title={getUndoReason(log)}>
-                                  ⚠️ Cannot Undo
-                                </div>
-                              )}
-                              
-                              <button
-                                onClick={() => {
-                                  setOpenMenuId(null);
-                                  console.log("Remove button clicked for log:", log);
-                                  setTransactionToRemove(log);
-                                  setShowRemoveConfirm(true);
-                                }}
-                                className="w-full text-left px-4 py-2 text-sm text-orange-300 hover:bg-gray-600"
-                                title="Remove this log entry (no container state changes)"
-                              >
-                                🗑️ Remove
-                              </button>
-                            </div>
+                      <div className="flex space-x-2">
+                        {canUndoTransaction(log) ? (
+                          <Button
+                            onClick={() => {
+                              setTransactionToUndo(log);
+                              setShowUndoConfirm(true);
+                            }}
+                            disabled={isUndoing}
+                            loading={isUndoing && undoingTransactionId === log.id}
+                            variant="ghost"
+                            size="sm"
+                            className="text-red-300 hover:bg-red-600 hover:text-white p-2"
+                            title={getUndoDescription(log)}
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                            </svg>
+                          </Button>
+                        ) : (
+                          <div 
+                            className="w-8 h-8 flex items-center justify-center text-gray-500 cursor-help" 
+                            title={getUndoReason(log)}
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                            </svg>
                           </div>
                         )}
+                        
+                        <Button
+                          onClick={() => {
+                            setTransactionToRemove(log);
+                            setShowRemoveConfirm(true);
+                          }}
+                          variant="ghost"
+                          size="sm"
+                          className="text-orange-300 hover:bg-orange-600 hover:text-white p-2"
+                          title="Remove this log entry (no container state changes)"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </Button>
                       </div>
                     </td>
                   </tr>
@@ -703,12 +667,13 @@ export const ViewLogModal = ({
           </div>
         )}
         <div className="p-6 border-t border-gray-700 flex justify-end">
-          <button
+          <Button
             onClick={onClose}
-            className="bg-gray-600 hover:bg-gray-500 text-white font-semibold py-3 px-6 rounded-md text-base"
+            variant="secondary"
+            size="lg"
           >
             Close
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -733,31 +698,29 @@ export const ViewLogModal = ({
                 This will reverse the transaction, update the container's current state, 
                 and completely remove the original transaction from the log. This action cannot be undone.
               </p>
-              <p className="text-xs text-blue-300 mt-2">
-                <strong>💡 Tip:</strong> Use "Undo" when you want to reverse the actual transaction effects. 
-                Use "Remove" when you just want to delete the log entry without affecting containers. Both options are available in the Actions dropdown menu.
-              </p>
             </div>
             <div className="flex justify-end space-x-3">
-              <button
+              <Button
                 onClick={() => {
                   setShowUndoConfirm(false);
                   setTransactionToUndo(null);
                 }}
-                className="bg-gray-600 py-2 px-4 rounded"
+                variant="secondary"
+                size="md"
               >
                 Cancel
-              </button>
-              <button
+              </Button>
+              <Button
                 onClick={() => {
                   setShowUndoConfirm(false);
                   handleUndoTransaction(transactionToUndo);
                   setTransactionToUndo(null);
                 }}
-                className="bg-red-600 py-2 px-4 rounded"
+                variant="danger"
+                size="md"
               >
                 Confirm Undo
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -789,26 +752,27 @@ export const ViewLogModal = ({
               </p>
             </div>
             <div className="flex justify-end space-x-3">
-              <button
+              <Button
                 onClick={() => {
                   setShowRemoveConfirm(false);
                   setTransactionToRemove(null);
                 }}
-                className="bg-gray-600 py-2 px-4 rounded"
+                variant="secondary"
+                size="md"
               >
                 Cancel
-              </button>
-              <button
+              </Button>
+              <Button
                 onClick={() => {
-                  console.log("Confirming remove for transaction:", transactionToRemove);
                   setShowRemoveConfirm(false);
                   handleRemoveLog(transactionToRemove);
                   setTransactionToRemove(null);
                 }}
-                className="bg-orange-600 py-2 px-4 rounded"
+                variant="warning"
+                size="md"
               >
                 Confirm Remove
-              </button>
+              </Button>
             </div>
           </div>
         </div>
