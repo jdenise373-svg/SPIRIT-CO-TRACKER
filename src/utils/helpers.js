@@ -92,7 +92,6 @@ export const calculateDerivedValuesFromProofGallons = (proofGallons, observedPro
   const tare = parseFloat(tareWeight) || 0;
   
   // For proof gallons input, we need to work backwards to find wine gallons
-  // This is more complex with TTB method, so we'll use an approximation
   let wineGallons = 0;
   if (prf > 0 && pg > 0) {
       // Use the true proof to calculate wine gallons
@@ -100,13 +99,15 @@ export const calculateDerivedValuesFromProofGallons = (proofGallons, observedPro
       wineGallons = pg / (trueProof / 100);
   } else if (pg === 0) {
       wineGallons = 0;
-  } else {
+  } else if (prf === 0) {
+      // If proof is 0, we can't calculate wine gallons from proof gallons
       wineGallons = 0;
   }
   
   const spiritDensity = calculateSpiritDensity(prf, temperature);
   const netWeightLbs = wineGallons * spiritDensity;
   const grossWeightLbs = netWeightLbs + tare;
+  
   return {
       netWeightLbs: parseFloat(netWeightLbs.toFixed(2)),
       wineGallons: parseFloat(wineGallons.toFixed(3)),
