@@ -18,7 +18,7 @@ import { Dashboard } from "./components/Dashboard";
 import { InventoryItem } from "./components/InventoryItem";
 import { ProductionView } from "./components/ProductionView";
 import { DropdownButton, DropdownItem } from "./components/DropdownButton";
-import { APP_NAME, DEFAULT_PRODUCTS } from "./constants";
+import { APP_NAME, DEFAULT_PRODUCTS, TRANSACTION_TYPES } from "./constants";
 
 import { 
   AddEditContainerModal,
@@ -391,8 +391,8 @@ function App() {
         logData = {
           type:
             item.status === "filled"
-              ? "DELETE_FILLED_CONTAINER"
-              : "DELETE_EMPTY_CONTAINER",
+              ? TRANSACTION_TYPES.DELETE_FILLED_CONTAINER
+              : TRANSACTION_TYPES.DELETE_EMPTY_CONTAINER,
           containerId: item.id,
           containerName: item.name,
           productType: item.currentFill?.productType || null,
@@ -419,7 +419,7 @@ function App() {
           item.id
         );
         logData = {
-          type: "DELETE_PRODUCT",
+          type: TRANSACTION_TYPES.DELETE_PRODUCT,
           productName: item.name,
           notes: "Product definition deleted.",
         };
@@ -430,7 +430,7 @@ function App() {
           item.id
         );
         logData = {
-          type: "DELETE_PRODUCTION_BATCH",
+          type: TRANSACTION_TYPES.DELETE_PRODUCTION_BATCH,
           batchId: item.id,
           batchName: item.name,
           batchType: item.batchType,
@@ -796,6 +796,11 @@ function App() {
           transactionLog={transactionLog}
           isLoadingLog={isLoadingLog}
           onClose={() => setShowViewLogModal(false)}
+          db={db}
+          userId={userId}
+          appId={appId}
+          inventory={inventory}
+          setErrorApp={setError}
         />
       )}
       {showImportModal && db && userId && (

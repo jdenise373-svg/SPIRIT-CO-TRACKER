@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { convertToCSV, downloadCSV } from "../../utils/helpers";
+import { TRANSACTION_TYPES } from "../../constants";
 
 // --- TtbReportModal (ENHANCED) ---
 export const TtbReportModal = ({ transactionLog, onClose }) => {
@@ -21,14 +22,34 @@ export const TtbReportModal = ({ transactionLog, onClose }) => {
       filteredLogs.forEach(log => {
           const pg = log.proofGallonsChange || 0;
           switch(log.type) {
-              case 'PRODUCTION': case 'DISTILLATION_FINISH': summary.production.spiritsProduced += pg; break;
-              case 'TRANSFER_OUT': summary.processing.transferredToStorage += Math.abs(pg); summary.storage.transferredOut += Math.abs(pg); break;
-              case 'TRANSFER_IN': summary.processing.transferredFromStorage += pg; summary.storage.transferredIn += pg; break;
-              case 'BOTTLE_PARTIAL': case 'BOTTLE_EMPTY': summary.processing.bottlingDump += Math.abs(pg); break;
-              case 'BOTTLING_GAIN': summary.processing.bottlingGain += pg; break;
-              case 'BOTTLING_LOSS': summary.processing.bottlingLoss += Math.abs(pg); break;
-              case 'SAMPLE_ADJUST': summary.processing.operationalLoss += Math.abs(pg); summary.storage.storageLosses += Math.abs(pg); break;
-              default: break;
+              case TRANSACTION_TYPES.PRODUCTION: 
+              case TRANSACTION_TYPES.DISTILLATION_FINISH: 
+                  summary.production.spiritsProduced += pg; 
+                  break;
+              case TRANSACTION_TYPES.TRANSFER_OUT: 
+                  summary.processing.transferredToStorage += Math.abs(pg); 
+                  summary.storage.transferredOut += Math.abs(pg); 
+                  break;
+              case TRANSACTION_TYPES.TRANSFER_IN: 
+                  summary.processing.transferredFromStorage += pg; 
+                  summary.storage.transferredIn += pg; 
+                  break;
+              case TRANSACTION_TYPES.BOTTLE_PARTIAL: 
+              case TRANSACTION_TYPES.BOTTLE_EMPTY: 
+                  summary.processing.bottlingDump += Math.abs(pg); 
+                  break;
+              case TRANSACTION_TYPES.BOTTLING_GAIN: 
+                  summary.processing.bottlingGain += pg; 
+                  break;
+              case TRANSACTION_TYPES.BOTTLING_LOSS: 
+                  summary.processing.bottlingLoss += Math.abs(pg); 
+                  break;
+              case TRANSACTION_TYPES.SAMPLE_ADJUST: 
+                  summary.processing.operationalLoss += Math.abs(pg); 
+                  summary.storage.storageLosses += Math.abs(pg); 
+                  break;
+              default: 
+                  break;
           }
       });
       setReport(summary);

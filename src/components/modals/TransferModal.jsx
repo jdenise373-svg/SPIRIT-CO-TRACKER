@@ -8,6 +8,7 @@ import {
   calculateDerivedValuesFromProofGallons,
   logTransaction,
 } from "../../utils/helpers";
+import { TRANSACTION_TYPES } from "../../constants";
 
 // --- TransferModal ---
 export const TransferModal = ({
@@ -170,7 +171,7 @@ export const TransferModal = ({
       });
       
       logTransaction(db, userId, appId, {
-        type: "TRANSFER_OUT",
+        type: TRANSACTION_TYPES.TRANSFER_OUT,
         containerId: sourceContainer.id,
         containerName: sourceContainer.name,
         productType: sourceProductType,
@@ -205,7 +206,7 @@ export const TransferModal = ({
       });
       
       logTransaction(db, userId, appId, {
-        type: "TRANSFER_IN",
+        type: TRANSACTION_TYPES.TRANSFER_IN,
         containerId: destinationId,
         containerName: destContainerData.name,
         productType: sourceProductType,
