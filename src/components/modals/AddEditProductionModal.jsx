@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { doc, collection, serverTimestamp, writeBatch } from "firebase/firestore";
 
 import { calculateDerivedValuesFromProofGallons, calculateDerivedValuesFromWineGallons, calculateDerivedValuesFromWeight} from "../../utils/helpers";
+import { TRANSACTION_TYPES } from "../../constants";
 
 export const AddEditProductionModal = ({ db, userId, appId, batch, type, fermentations, products, inventory, onClose, setErrorApp }) => {
   const isEdit = !!batch;
@@ -223,7 +224,7 @@ export const AddEditProductionModal = ({ db, userId, appId, batch, type, ferment
           if (type === 'distillation' && yieldCalculated.proofGallons > 0) {
               const pg = yieldCalculated.proofGallons;
               const logData = {
-                  type: "DISTILLATION_FINISH",
+                  type: TRANSACTION_TYPES.DISTILLATION_FINISH,
                   batchId: docRef.id,
                   batchName: dataToSave.name,
                   productType: dataToSave.productType,
@@ -314,7 +315,7 @@ export const AddEditProductionModal = ({ db, userId, appId, batch, type, ferment
                       // Log storage tank pull
                       const logCollRef = collection(db, `artifacts/${appId}/users/${userId}/transactionLog`);
                       const pullLogData = {
-                          type: "TRANSFER_OUT",
+                          type: TRANSACTION_TYPES.TRANSFER_OUT,
                           containerId: selectedStorageTankId,
                           containerName: sourceTank.name,
                           productType: sourceTank.currentFill.productType,

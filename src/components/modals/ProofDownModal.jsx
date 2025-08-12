@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { writeBatch } from "firebase/firestore";
 import { doc, collection, serverTimestamp } from "firebase/firestore";
 import { calculateSpiritDensity, calculateDerivedValuesFromWeight, calculateDerivedValuesFromWineGallons, calculateDerivedValuesFromProofGallons } from "../../utils/helpers";
-import { CONTAINER_CAPACITIES_GALLONS, DENSITY_WATER_LBS_PER_GALLON } from "../../constants";
+import { CONTAINER_CAPACITIES_GALLONS, DENSITY_WATER_LBS_PER_GALLON, TRANSACTION_TYPES } from "../../constants";
 
 // --- ProofDownModal ---
 export const ProofDownModal = ({ db, userId, appId, container, onClose, setErrorApp }) => {
@@ -54,7 +54,7 @@ export const ProofDownModal = ({ db, userId, appId, container, onClose, setError
       batch.update(containerRef, updatedData);
 
       const logData = {
-          type: "PROOF_DOWN",
+          type: TRANSACTION_TYPES.PROOF_DOWN,
           containerId: container.id,
           containerName: container.name,
           productType: productType,

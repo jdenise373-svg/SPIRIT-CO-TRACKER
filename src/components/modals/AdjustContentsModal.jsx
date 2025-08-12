@@ -2,6 +2,7 @@ import { useState } from "react";
 import { writeBatch } from "firebase/firestore";
 import { doc, collection, serverTimestamp } from "firebase/firestore";
 import { calculateSpiritDensity, calculateDerivedValuesFromWeight } from "../../utils/helpers";
+import { TRANSACTION_TYPES } from "../../constants";
 
 // --- AdjustContentsModal ---
 export const AdjustContentsModal = ({ db, userId, appId, container, onClose, setErrorApp }) => {
@@ -52,7 +53,7 @@ export const AdjustContentsModal = ({ db, userId, appId, container, onClose, set
           "currentFill.proofGallons": finalCalcs.proofGallons,
       });
 
-      const logData = { type: "SAMPLE_ADJUST", containerId: container.id, containerName: container.name, productType: productType, proof: proof, netWeightLbsChange: -netLbsToRemove, proofGallonsChange: -proofGallonsRemoved, notes: `Sample or tax adjustment via ${removalInputMethod}.`};
+      const logData = { type: TRANSACTION_TYPES.SAMPLE_ADJUST, containerId: container.id, containerName: container.name, productType: productType, proof: proof, netWeightLbsChange: -netLbsToRemove, proofGallonsChange: -proofGallonsRemoved, notes: `Sample or tax adjustment via ${removalInputMethod}.`};
       const logCollRef = collection(db, `artifacts/${appId}/users/${userId}/transactionLog`);
       batch.set(doc(logCollRef), {...logData, timestamp: serverTimestamp()});
       

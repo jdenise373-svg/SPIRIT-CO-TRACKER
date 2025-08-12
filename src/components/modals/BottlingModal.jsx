@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from "react";
 import { writeBatch } from "firebase/firestore";
 import { doc, collection, serverTimestamp } from "firebase/firestore";
 import { calculateSpiritDensity, calculateDerivedValuesFromWeight } from "../../utils/helpers";
-import { BOTTLE_SIZES_ML, ML_PER_GALLON } from "../../constants";
+import { BOTTLE_SIZES_ML, ML_PER_GALLON, TRANSACTION_TYPES } from "../../constants";
 
 // --- BottlingModal ---
 export const BottlingModal = ({ db, userId, appId, container, onClose, setErrorApp }) => {
@@ -66,7 +66,7 @@ export const BottlingModal = ({ db, userId, appId, container, onClose, setErrorA
       
       if (bottlingCalcs.isGain) {
           const emptyLog = {
-              type: "BOTTLE_EMPTY", containerId: container.id, containerName: container.name, productType, proof,
+              type: TRANSACTION_TYPES.BOTTLE_EMPTY, containerId: container.id, containerName: container.name, productType, proof,
               netWeightLbsChange: -initialNetWeightLbs,
               proofGallonsChange: -initialProofGallons,
               notes: `Bottled ${numBottles} x ${bottleSizeMl}mL. Container emptied with gain.`
@@ -78,7 +78,7 @@ export const BottlingModal = ({ db, userId, appId, container, onClose, setErrorA
           const lbsGain = wgGain * spiritDensity;
 
           const gainLog = {
-              type: "BOTTLING_GAIN", containerId: container.id, containerName: container.name, productType, proof,
+              type: TRANSACTION_TYPES.BOTTLING_GAIN, containerId: container.id, containerName: container.name, productType, proof,
               netWeightLbsChange: lbsGain,
               proofGallonsChange: pgGain,
               notes: `Gain of ${wgGain.toFixed(3)} WG recorded during bottling.`
@@ -94,7 +94,7 @@ export const BottlingModal = ({ db, userId, appId, container, onClose, setErrorA
 
       } else {
           const bottlingLog = {
-              type: "BOTTLE_PARTIAL", containerId: container.id, containerName: container.name, productType, proof,
+              type: TRANSACTION_TYPES.BOTTLE_PARTIAL, containerId: container.id, containerName: container.name, productType, proof,
               netWeightLbsChange: -bottlingCalcs.lbsBottled,
               proofGallonsChange: -bottlingCalcs.pgBottled,
               notes: `Bottled ${numBottles} x ${bottleSizeMl}mL units.`
@@ -108,7 +108,7 @@ export const BottlingModal = ({ db, userId, appId, container, onClose, setErrorA
           } else {
               if (remainderAction === 'loss') {
                   const lossLog = {
-                      type: "BOTTLING_LOSS", containerId: container.id, containerName: container.name, productType, proof,
+                      type: TRANSACTION_TYPES.BOTTLING_LOSS, containerId: container.id, containerName: container.name, productType, proof,
                       netWeightLbsChange: - (initialNetWeightLbs - bottlingCalcs.lbsBottled),
                       proofGallonsChange: - (initialProofGallons - bottlingCalcs.pgBottled),
                       notes: `Remainder of ${bottlingCalcs.finalWg.toFixed(3)} WG written off as loss.`
@@ -126,7 +126,7 @@ export const BottlingModal = ({ db, userId, appId, container, onClose, setErrorA
                   const adjLbs = adjWg * spiritDensity;
 
                   const adjLog = {
-                      type: adjustmentType === 'loss' ? "BOTTLING_LOSS" : "BOTTLING_GAIN", containerId: container.id, containerName: container.name, productType, proof,
+                      type: adjustmentType === 'loss' ? TRANSACTION_TYPES.BOTTLING_LOSS : TRANSACTION_TYPES.BOTTLING_GAIN, containerId: container.id, containerName: container.name, productType, proof,
                       netWeightLbsChange: adjLbs,
                       proofGallonsChange: adjPg,
                       notes: `Manual bottling ${adjustmentType}: ${adjAmt.toFixed(3)} WG.`

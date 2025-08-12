@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { writeBatch } from "firebase/firestore";
 import { doc, collection, serverTimestamp } from "firebase/firestore";
 import { calculateSpiritDensity, calculateDerivedValuesFromWeight, calculateDerivedValuesFromWineGallons, calculateDerivedValuesFromProofGallons } from "../../utils/helpers";
+import { TRANSACTION_TYPES } from "../../constants";
 
 // --- AddEditContainerModal ---
 export const AddEditContainerModal = ({ db, userId, appId, container, mode, products, inventory, onClose, setErrorApp }) => {
@@ -173,18 +174,18 @@ export const AddEditContainerModal = ({ db, userId, appId, container, mode, prod
 
           if (mode === 'add') {
               if (formData.type === 'still' && newStatus === 'filled') {
-                  logEntryType = "PRODUCTION";
+                  logEntryType = TRANSACTION_TYPES.PRODUCTION;
               } else {
-                  logEntryType = newStatus === 'filled' ? "CREATE_FILLED_CONTAINER" : "CREATE_EMPTY_CONTAINER";
+                  logEntryType = newStatus === 'filled' ? TRANSACTION_TYPES.CREATE_FILLED_CONTAINER : TRANSACTION_TYPES.CREATE_EMPTY_CONTAINER;
               }
               logNetChange = finalCalcs.netWeightLbs; 
               logPgChange = finalCalcs.proofGallons;
           }
           else if (mode === 'refill') { 
               if (formData.type === 'still' && newStatus === 'filled') {
-                  logEntryType = "PRODUCTION";
+                  logEntryType = TRANSACTION_TYPES.PRODUCTION;
               } else {
-                  logEntryType = "REFILL_CONTAINER";
+                  logEntryType = TRANSACTION_TYPES.REFILL_CONTAINER;
               }
               logNetChange = finalCalcs.netWeightLbs; 
               logPgChange = finalCalcs.proofGallons;
@@ -194,14 +195,14 @@ export const AddEditContainerModal = ({ db, userId, appId, container, mode, prod
               logPgChange = finalCalcs.proofGallons - (oldFillData.proofGallons || 0);
               if (container.status === 'empty' && newStatus === 'filled') {
                    if (formData.type === 'still') {
-                      logEntryType = "PRODUCTION";
+                      logEntryType = TRANSACTION_TYPES.PRODUCTION;
                   } else {
-                      logEntryType = "EDIT_FILL_FROM_EMPTY";
+                      logEntryType = TRANSACTION_TYPES.EDIT_FILL_FROM_EMPTY;
                   }
               }
-              else if (container.status === 'filled' && newStatus === 'empty') logEntryType = "EDIT_EMPTY_FROM_FILLED";
-              else if (newStatus === 'filled') logEntryType = "EDIT_FILL_DATA_CORRECTION";
-              else logEntryType = "EDIT_EMPTY_DATA_CORRECTION";
+              else if (container.status === 'filled' && newStatus === 'empty') logEntryType = TRANSACTION_TYPES.EDIT_EMPTY_FROM_FILLED;
+              else if (newStatus === 'filled') logEntryType = TRANSACTION_TYPES.EDIT_FILL_DATA_CORRECTION;
+              else logEntryType = TRANSACTION_TYPES.EDIT_EMPTY_DATA_CORRECTION;
           }
       }
 

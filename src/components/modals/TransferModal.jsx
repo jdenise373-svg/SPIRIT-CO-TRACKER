@@ -8,6 +8,8 @@ import {
   calculateDerivedValuesFromProofGallons,
   logTransaction,
 } from "../../utils/helpers";
+import { TRANSACTION_TYPES } from "../../constants";
+import Button from "../ui/Button";
 
 // --- TransferModal ---
 export const TransferModal = ({
@@ -26,6 +28,7 @@ export const TransferModal = ({
   const [transferProofGallons, setTransferProofGallons] = useState("");
   const [transferAll, setTransferAll] = useState(false);
   const [formError, setFormError] = useState("");
+  const [isTransferring, setIsTransferring] = useState(false);
   
   const availableDestinations = allContainers.filter(
     (c) => c.id !== sourceContainer.id && c.status === "empty"
@@ -50,7 +53,10 @@ export const TransferModal = ({
   }, [transferAll, transferUnit, sourceMaxNet, sourceMaxWineGallons, sourceMaxProofGallons]);
 
   const handleTransfer = async () => {
+    if (isTransferring) return; // Prevent multiple transfers
+    
     setFormError("");
+    setIsTransferring(true);
     
     let netToTransfer = 0;
     let transferValue = 0;
@@ -170,7 +176,7 @@ export const TransferModal = ({
       });
       
       logTransaction(db, userId, appId, {
-        type: "TRANSFER_OUT",
+        type: TRANSACTION_TYPES.TRANSFER_OUT,
         containerId: sourceContainer.id,
         containerName: sourceContainer.name,
         productType: sourceProductType,
@@ -205,7 +211,7 @@ export const TransferModal = ({
       });
       
       logTransaction(db, userId, appId, {
-        type: "TRANSFER_IN",
+        type: TRANSACTION_TYPES.TRANSFER_IN,
         containerId: destinationId,
         containerName: destContainerData.name,
         productType: sourceProductType,
@@ -224,6 +230,8 @@ export const TransferModal = ({
       console.error("Transfer error: ", err);
       setFormError("Transfer failed: " + err.message);
       setErrorApp("Transfer failed.");
+    } finally {
+      setIsTransferring(false);
     }
   };
 
@@ -287,7 +295,8 @@ export const TransferModal = ({
           <select
             value={destinationId}
             onChange={(e) => setDestinationId(e.target.value)}
-            className="w-full bg-gray-700 p-2 rounded mt-1"
+            disabled={isTransferring}
+            className="w-full bg-gray-700 p-2 rounded mt-1 disabled:bg-gray-600 disabled:cursor-not-allowed"
           >
             <option value="">-- Select Empty Destination --</option>
             {availableDestinations.map((c) => (
@@ -308,7 +317,8 @@ export const TransferModal = ({
                   value="weight"
                   checked={transferUnit === "weight"}
                   onChange={(e) => handleTransferUnitChange(e.target.value)}
-                  className="mr-2 h-4 w-4 text-blue-500 border-gray-600 focus:ring-blue-500"
+                  disabled={isTransferring}
+                  className="mr-2 h-4 w-4 text-blue-500 border-gray-600 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
                 />
                 <span className="text-sm text-gray-300">Weight (lbs)</span>
               </label>
@@ -319,7 +329,8 @@ export const TransferModal = ({
                   value="wineGallons"
                   checked={transferUnit === "wineGallons"}
                   onChange={(e) => handleTransferUnitChange(e.target.value)}
-                  className="mr-2 h-4 w-4 text-blue-500 border-gray-600 focus:ring-blue-500"
+                  disabled={isTransferring}
+                  className="mr-2 h-4 w-4 text-blue-500 border-gray-600 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
                 />
                 <span className="text-sm text-gray-300">Wine Gal</span>
               </label>
@@ -330,7 +341,8 @@ export const TransferModal = ({
                   value="proofGallons"
                   checked={transferUnit === "proofGallons"}
                   onChange={(e) => handleTransferUnitChange(e.target.value)}
-                  className="mr-2 h-4 w-4 text-blue-500 border-gray-600 focus:ring-blue-500"
+                  disabled={isTransferring}
+                  className="mr-2 h-4 w-4 text-blue-500 border-gray-600 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
                 />
                 <span className="text-sm text-gray-300">Proof Gal</span>
               </label>
@@ -351,11 +363,11 @@ export const TransferModal = ({
                 setTransferWeightNet(e.target.value);
                 if (transferAll) setTransferAll(false);
               }}
-              disabled={transferAll}
+              disabled={transferAll || isTransferring}
               step="0.01"
               min="0.01"
               placeholder="Net Lbs to Transfer"
-              className="w-full bg-gray-700 p-2 rounded mt-1 disabled:bg-gray-600"
+              className="w-full bg-gray-700 p-2 rounded mt-1 disabled:bg-gray-600 disabled:cursor-not-allowed"
             />
           )}
 
@@ -368,11 +380,11 @@ export const TransferModal = ({
                 setTransferWineGallons(e.target.value);
                 if (transferAll) setTransferAll(false);
               }}
-              disabled={transferAll}
+              disabled={transferAll || isTransferring}
               step="0.01"
               min="0.01"
               placeholder="Wine Gallons to Transfer"
-              className="w-full bg-gray-700 p-2 rounded mt-1 disabled:bg-gray-600"
+              className="w-full bg-gray-700 p-2 rounded mt-1 disabled:bg-gray-600 disabled:cursor-not-allowed"
             />
           )}
 
@@ -385,11 +397,11 @@ export const TransferModal = ({
                 setTransferProofGallons(e.target.value);
                 if (transferAll) setTransferAll(false);
               }}
-              disabled={transferAll}
+              disabled={transferAll || isTransferring}
               step="0.01"
               min="0.01"
               placeholder="Proof Gallons to Transfer"
-              className="w-full bg-gray-700 p-2 rounded mt-1 disabled:bg-gray-600"
+              className="w-full bg-gray-700 p-2 rounded mt-1 disabled:bg-gray-600 disabled:cursor-not-allowed"
             />
           )}
 
@@ -399,7 +411,8 @@ export const TransferModal = ({
               id="transferAll"
               checked={transferAll}
               onChange={(e) => setTransferAll(e.target.checked)}
-              className="mr-2 h-4 w-4 text-blue-500 border-gray-600 rounded focus:ring-blue-500"
+              disabled={isTransferring}
+              className="mr-2 h-4 w-4 text-blue-500 border-gray-600 rounded focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
             />
             <label htmlFor="transferAll" className="text-sm text-gray-300">
               Transfer All
@@ -419,19 +432,24 @@ export const TransferModal = ({
           )}
           
           <div className="flex justify-end space-x-3 pt-3">
-            <button
+            <Button
               type="button"
               onClick={onClose}
-              className="bg-gray-600 py-2 px-4 rounded"
+              variant="secondary"
+              size="md"
+              disabled={isTransferring}
             >
               Cancel
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={handleTransfer}
-              className="bg-purple-600 py-2 px-4 rounded"
+              variant="primary"
+              size="md"
+              loading={isTransferring}
+              disabled={isTransferring}
             >
               Confirm Transfer
-            </button>
+            </Button>
           </div>
         </div>
       </div>

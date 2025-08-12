@@ -1,6 +1,7 @@
 import { useState} from "react";
 import { doc, updateDoc } from "firebase/firestore";
 import { logTransaction } from "../../utils/helpers";
+import { TRANSACTION_TYPES } from "../../constants";
 
 export const ChangeAccountModal = ({ db, userId, appId, container, onClose, setErrorApp }) => {
   const [newAccount, setNewAccount] = useState(container?.currentFill?.account || 'storage');
@@ -22,7 +23,7 @@ export const ChangeAccountModal = ({ db, userId, appId, container, onClose, setE
           });
           
           await logTransaction(db, userId, appId, {
-              type: "CHANGE_ACCOUNT",
+              type: TRANSACTION_TYPES.CHANGE_ACCOUNT,
               containerId: container.id,
               containerName: container.name,
               notes: `Account changed to ${newAccount}.`
