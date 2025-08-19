@@ -240,14 +240,45 @@ export const ViewLogModal = ({
     }
 
     try {
-      // Simply delete the log entry without affecting container state
+      const batch = writeBatch(db);
+
+      // First, reverse the container state changes (same logic as undo)
+      if (canUndoTransaction(transaction)) {
+        switch (transaction.type) {
+          case TRANSACTION_TYPES.TRANSFER_IN:
+            await undoTransferIn(batch, transaction);
+            break;
+          case TRANSACTION_TYPES.TRANSFER_OUT:
+            await undoTransferOut(batch, transaction);
+            break;
+          case TRANSACTION_TYPES.SAMPLE_ADJUST:
+            await undoSampleAdjust(batch, transaction);
+            break;
+          case TRANSACTION_TYPES.BOTTLE_PARTIAL:
+          case TRANSACTION_TYPES.BOTTLE_EMPTY:
+            await undoBottling(batch, transaction);
+            break;
+          case TRANSACTION_TYPES.BOTTLING_GAIN:
+            await undoBottlingGain(batch, transaction);
+            break;
+          case TRANSACTION_TYPES.BOTTLING_LOSS:
+            await undoBottlingLoss(batch, transaction);
+            break;
+          case TRANSACTION_TYPES.PROOF_DOWN:
+            await undoProofDown(batch, transaction);
+            break;
+        }
+      }
+
+      // Then delete the log entry
       const logRef = doc(
         db,
         `artifacts/${appId}/users/${userId}/transactionLog`,
         transaction.id
       );
-      await deleteDoc(logRef);
+      batch.delete(logRef);
 
+      await batch.commit();
       setErrorApp("");
       setRemoveSuccess(true);
 
@@ -615,7 +646,7 @@ export const ViewLogModal = ({
         {removeSuccess && (
           <div className="mx-6 mt-4 p-4 bg-blue-900 bg-opacity-30 border border-blue-700 rounded-lg">
             <p className="text-sm text-blue-200">
-              ✅ Log entry successfully removed!
+              ✅ Log entry successfully removed and container states corrected!
             </p>
           </div>
         )}
@@ -888,9 +919,9 @@ export const ViewLogModal = ({
               </p>
               <p className="text-sm text-orange-300 mt-3">
                 <strong>⚠️ Warning:</strong> This will permanently delete this
-                log entry without affecting any container states. This is useful
-                for cleaning up duplicate entries or correcting data entry
-                errors.
+                log entry and reverse the container state changes (if applicable)
+                to its previous state. This is useful for cleaning up duplicate
+                entries or correcting data entry errors.
               </p>
               <p className="text-sm text-gray-400 mt-2">
                 This action cannot be undone and will leave no audit trail of
