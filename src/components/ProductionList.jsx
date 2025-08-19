@@ -29,10 +29,10 @@ export const ProductionList = ({ title, batches, onEdit, onDelete }) => (
                                       <p><strong>Pulled From:</strong> {batch.selectedStorageTankName || 'Storage Tank'}</p>
                                   )}
                                   {batch.chargeCalculated && batch.chargeCalculated.proofGallons > 0 && (
-                                      <p><strong>Charge:</strong> {batch.chargeCalculated.proofGallons.toFixed(3)} PG @ {batch.chargeProof} proof</p>
+                                      <p><strong>Charge:</strong> {batch.chargeCalculated.proofGallons.toFixed(2)} PG @ {batch.chargeProof} proof</p>
                                   )}
                                   {batch.yieldCalculated && batch.yieldCalculated.proofGallons > 0 && (
-                                      <p><strong>Yield:</strong> {batch.yieldCalculated.proofGallons.toFixed(3)} PG @ {batch.yieldProof} proof</p>
+                                      <p><strong>Yield:</strong> {batch.yieldCalculated.proofGallons.toFixed(2)} PG @ {batch.yieldProof} proof</p>
                                   )}
                                   <p><strong>Product:</strong> {batch.productType}</p>
                                   {batch.selectedContainerId && (

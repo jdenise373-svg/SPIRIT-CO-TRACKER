@@ -61,7 +61,7 @@ export const ProofDownModal = ({ db, userId, appId, container, onClose, setError
           proof: newProof,
           netWeightLbsChange: calculations.waterToAddLbs,
           proofGallonsChange: 0,
-          notes: `Proofed down from ${initialProof} to ${newProof}. Added ${calculations.waterToAddGallons.toFixed(3)} gal of water.`
+          notes: `Proofed down from ${initialProof} to ${newProof}. Added ${calculations.waterToAddGallons.toFixed(2)} gal of water.`
       };
       const logCollRef = collection(db, `artifacts/${appId}/users/${userId}/transactionLog`);
       batch.set(doc(logCollRef), { ...logData, timestamp: serverTimestamp() });
@@ -85,7 +85,7 @@ export const ProofDownModal = ({ db, userId, appId, container, onClose, setError
               <div className="space-y-4">
                   <div className="text-sm text-gray-400">
                       <p><strong>Product:</strong> {productType}</p>
-                      <p><strong>Current State:</strong> {initialWineGallons.toFixed(3)} WG @ {initialProof} Proof ({initialProofGallons.toFixed(3)} PG)</p>
+                      <p><strong>Current State:</strong> {initialWineGallons.toFixed(2)} WG @ {initialProof} Proof ({initialProofGallons.toFixed(2)} PG)</p>
                   </div>
                   <div>
                       <label htmlFor="targetProof" className="block text-sm font-medium text-gray-300">New Target Proof</label>
@@ -102,11 +102,11 @@ export const ProofDownModal = ({ db, userId, appId, container, onClose, setError
                   {calculations.isValid && (
                       <div className="bg-gray-700 p-3 rounded border border-gray-600 text-sm">
                           <h4 className="font-semibold text-gray-300 mb-2">Resulting Change:</h4>
-                          <p><strong>Add Water:</strong> <span className="text-cyan-300">{calculations.waterToAddGallons.toFixed(3)} gal</span> ({calculations.waterToAddLbs.toFixed(2)} lbs)</p>
+                          <p><strong>Add Water:</strong> <span className="text-cyan-300">{calculations.waterToAddGallons.toFixed(2)} gal</span> ({calculations.waterToAddLbs.toFixed(2)} lbs)</p>
                           <hr className="my-2 border-gray-600" />
-                          <p><strong>Final WG:</strong> {calculations.finalWineGallons.toFixed(3)} gal</p>
+                          <p><strong>Final WG:</strong> {calculations.finalWineGallons.toFixed(2)} gal</p>
                           <p><strong>Final Gross Wt:</strong> {calculations.finalGrossWeight.toFixed(2)} lbs</p>
-                          <p className="font-bold"><strong>Final Proof Gallons:</strong> {initialProofGallons.toFixed(3)} PG (Unchanged)</p>
+                          <p className="font-bold"><strong>Final Proof Gallons:</strong> {initialProofGallons.toFixed(2)} PG (Unchanged)</p>
                       </div>
                   )}
                   <div className="flex justify-end space-x-3 pt-3">

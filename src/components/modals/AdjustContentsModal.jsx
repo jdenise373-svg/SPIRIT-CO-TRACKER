@@ -142,7 +142,7 @@ export const AdjustContentsModal = ({
         </h2>
         <p className="text-sm text-gray-400 mb-1">
           ({productType}) Available: {netWeightLbs.toFixed(2)} lbs /{" "}
-          {wineGallons.toFixed(3)} WG
+          {wineGallons.toFixed(2)} WG
         </p>
         {formError && (
           <div className="bg-red-600 p-2 rounded mb-3 text-sm">{formError}</div>

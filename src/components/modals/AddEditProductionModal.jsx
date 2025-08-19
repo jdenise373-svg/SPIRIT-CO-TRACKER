@@ -39,7 +39,7 @@ export const AddEditProductionModal = ({ db, userId, appId, batch, type, ferment
           id: c.id,
           name: c.name,
           type: c.type,
-          displayName: `${c.name} (${c.type.replace(/_/g, ' ')}) - ${c.currentFill?.proofGallons?.toFixed(3)} PG`,
+          displayName: `${c.name} (${c.type.replace(/_/g, ' ')}) - ${c.currentFill?.proofGallons?.toFixed(2)} PG`,
           currentFill: c.currentFill
       }));
   }, [inventory]);
@@ -180,7 +180,7 @@ export const AddEditProductionModal = ({ db, userId, appId, batch, type, ferment
 
                   // Check if pull amount exceeds available amount
                   if (pullCalculated.proofGallons > sourceTank.currentFill.proofGallons + 0.001) {
-                      setFormError(`Cannot pull ${pullCalculated.proofGallons.toFixed(3)} PG from tank that only has ${sourceTank.currentFill.proofGallons.toFixed(3)} PG.`);
+                      setFormError(`Cannot pull ${pullCalculated.proofGallons.toFixed(2)} PG from tank that only has ${sourceTank.currentFill.proofGallons.toFixed(2)} PG.`);
                       return;
                   }
               }
@@ -230,7 +230,7 @@ export const AddEditProductionModal = ({ db, userId, appId, batch, type, ferment
                   productType: dataToSave.productType,
                   proof: parseFloat(dataToSave.yieldProof),
                   proofGallonsChange: pg,
-                  notes: `Produced ${pg.toFixed(3)} PG of ${dataToSave.productType}.`
+                  notes: `Produced ${pg.toFixed(2)} PG of ${dataToSave.productType}.`
               };
               const logCollRef = collection(db, `artifacts/${appId}/users/${userId}/transactionLog`);
               batchRef.set(doc(logCollRef), {...logData, timestamp: serverTimestamp()});
@@ -266,7 +266,7 @@ export const AddEditProductionModal = ({ db, userId, appId, batch, type, ferment
                           proof: parseFloat(dataToSave.yieldProof),
                           netWeightLbsChange: yieldCalculated.netWeightLbs,
                           proofGallonsChange: yieldCalculated.proofGallons,
-                          notes: `Filled with ${yieldCalculated.proofGallons.toFixed(3)} PG from distillation batch ${dataToSave.name}.`
+                          notes: `Filled with ${yieldCalculated.proofGallons.toFixed(2)} PG from distillation batch ${dataToSave.name}.`
                       };
                       batchRef.set(doc(logCollRef), {...containerLogData, timestamp: serverTimestamp()});
                   }
@@ -322,7 +322,7 @@ export const AddEditProductionModal = ({ db, userId, appId, batch, type, ferment
                           proof: tankProof,
                           netWeightLbsChange: -pullCalculated.netWeightLbs,
                           proofGallonsChange: -pullCalculated.proofGallons,
-                          notes: `Pulled ${pullCalculated.proofGallons.toFixed(3)} PG for distillation batch ${dataToSave.name}.`
+                          notes: `Pulled ${pullCalculated.proofGallons.toFixed(2)} PG for distillation batch ${dataToSave.name}.`
                       };
                       batchRef.set(doc(logCollRef), {...pullLogData, timestamp: serverTimestamp()});
                   }
@@ -418,8 +418,8 @@ export const AddEditProductionModal = ({ db, userId, appId, batch, type, ferment
                                       <div className="flex flex-col justify-end">
                                           <div className="text-sm text-gray-400">
                                               <div>Net Weight: {chargeCalculated.netWeightLbs.toFixed(2)} lbs</div>
-                                              <div>Wine Gallons: {chargeCalculated.wineGallons.toFixed(3)} gal</div>
-                                              <div>Proof Gallons: {chargeCalculated.proofGallons.toFixed(3)} PG</div>
+                                              <div>Wine Gallons: {chargeCalculated.wineGallons.toFixed(2)} gal</div>
+                                              <div>Proof Gallons: {chargeCalculated.proofGallons.toFixed(2)} PG</div>
                                           </div>
                                       </div>
                                   </div>
@@ -485,8 +485,8 @@ export const AddEditProductionModal = ({ db, userId, appId, batch, type, ferment
                                   <div className="flex flex-col justify-end">
                                       <div className="text-sm text-gray-400">
                                           <div>Net Weight: {chargeCalculated.netWeightLbs.toFixed(2)} lbs</div>
-                                          <div>Wine Gallons: {chargeCalculated.wineGallons.toFixed(3)} gal</div>
-                                          <div>Proof Gallons: {chargeCalculated.proofGallons.toFixed(3)} PG</div>
+                                          <div>Wine Gallons: {chargeCalculated.wineGallons.toFixed(2)} gal</div>
+                                          <div>Proof Gallons: {chargeCalculated.proofGallons.toFixed(2)} PG</div>
                                       </div>
                                   </div>
                               </div>
@@ -551,8 +551,8 @@ export const AddEditProductionModal = ({ db, userId, appId, batch, type, ferment
                                   <div className="flex flex-col justify-end">
                                       <div className="text-sm text-gray-400">
                                           <div>Net Weight: {yieldCalculated.netWeightLbs.toFixed(2)} lbs</div>
-                                          <div>Wine Gallons: {yieldCalculated.wineGallons.toFixed(3)} gal</div>
-                                          <div>Proof Gallons: {yieldCalculated.proofGallons.toFixed(3)} PG</div>
+                                          <div>Wine Gallons: {yieldCalculated.wineGallons.toFixed(2)} gal</div>
+                                          <div>Proof Gallons: {yieldCalculated.proofGallons.toFixed(2)} PG</div>
                                       </div>
                                   </div>
                               </div>

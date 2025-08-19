@@ -41,11 +41,11 @@ export const Dashboard = ({ inventory }) => {
            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="bg-gray-700 p-4 rounded-lg text-center">
                   <p className="text-sm text-blue-300">Total Proof Gallons</p>
-                  <p className="text-3xl font-bold">{stats.totalProofGallons.toFixed(3)}</p>
+                  <p className="text-3xl font-bold">{stats.totalProofGallons.toFixed(2)}</p>
               </div>
               <div className="bg-gray-700 p-4 rounded-lg text-center">
                   <p className="text-sm text-blue-300">Total Wine Gallons</p>
-                  <p className="text-3xl font-bold">{stats.totalWineGallons.toFixed(3)}</p>
+                  <p className="text-3xl font-bold">{stats.totalWineGallons.toFixed(2)}</p>
               </div>
               <div className="bg-gray-700 p-4 rounded-lg text-center">
                   <p className="text-sm text-blue-300">Filled Containers</p>
@@ -64,7 +64,7 @@ export const Dashboard = ({ inventory }) => {
                           {stats.sortedProducts.map(([product, totalPg]) => (
                               <li key={product} className="flex justify-between items-center text-sm">
                                   <span className="text-gray-300">{product}</span>
-                                  <span className="font-mono text-blue-300">{totalPg.toFixed(3)} PG</span>
+                                  <span className="font-mono text-blue-300">{totalPg.toFixed(2)} PG</span>
                               </li>
                           ))}
                       </ul>

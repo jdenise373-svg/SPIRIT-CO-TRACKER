@@ -59,9 +59,9 @@ export const calculateDerivedValuesFromWeight = (tareWeight, grossWeight, observ
   
   return {
       netWeightLbs: parseFloat(netWeightLbs.toFixed(2)),
-      wineGallons: parseFloat(wineGallons.toFixed(3)),
-      proofGallons: parseFloat(proofGallons.toFixed(3)),
-      spiritDensity: parseFloat(spiritDensity.toFixed(3)),
+      wineGallons: parseFloat(wineGallons.toFixed(2)),
+      proofGallons: parseFloat(proofGallons.toFixed(2)),
+      spiritDensity: parseFloat(spiritDensity.toFixed(2)),
       grossWeightLbs: parseFloat(gross.toFixed(2))
   };
 };
@@ -79,9 +79,9 @@ export const calculateDerivedValuesFromWineGallons = (wineGallons, observedProof
   
   return {
       netWeightLbs: parseFloat(netWeightLbs.toFixed(2)),
-      wineGallons: parseFloat(wg.toFixed(3)),
-      proofGallons: parseFloat(proofGallons.toFixed(3)),
-      spiritDensity: parseFloat(spiritDensity.toFixed(3)),
+      wineGallons: parseFloat(wg.toFixed(2)),
+      proofGallons: parseFloat(proofGallons.toFixed(2)),
+      spiritDensity: parseFloat(spiritDensity.toFixed(2)),
       grossWeightLbs: parseFloat(grossWeightLbs.toFixed(2))
   };
 };
@@ -110,9 +110,9 @@ export const calculateDerivedValuesFromProofGallons = (proofGallons, observedPro
   
   return {
       netWeightLbs: parseFloat(netWeightLbs.toFixed(2)),
-      wineGallons: parseFloat(wineGallons.toFixed(3)),
-      proofGallons: parseFloat(pg.toFixed(3)),
-      spiritDensity: parseFloat(spiritDensity.toFixed(3)),
+      wineGallons: parseFloat(wineGallons.toFixed(2)),
+      proofGallons: parseFloat(pg.toFixed(2)),
+      spiritDensity: parseFloat(spiritDensity.toFixed(2)),
       grossWeightLbs: parseFloat(grossWeightLbs.toFixed(2))
   };
 };

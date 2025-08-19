@@ -59,22 +59,22 @@ export const TtbReportModal = ({ transactionLog, onClose }) => {
       if(!report) return;
       const headers = ["TTB Form", "Part", "Line", "Description", "Proof Gallons (PG)"];
       const data = [
-          ["Production Report (TTB F 5110.40)", "Part I", "2", "Spirits produced by distillation", report.production.spiritsProduced.toFixed(3)],
-          ["Processing Report (TTB F 5110.28)", "Part I", "3", "Spirits received from storage", report.processing.transferredFromStorage.toFixed(3)],
-          ["Processing Report (TTB F 5110.28)", "Part II", "20", "Spirits dumped for bottling", report.processing.bottlingDump.toFixed(3)],
-          ["Processing Report (TTB F 5110.28)", "Part II", "26", "Bottling gains", report.processing.bottlingGain.toFixed(3)],
-          ["Processing Report (TTB F 5110.28)", "Part II", "27", "Bottling losses", report.processing.bottlingLoss.toFixed(3)],
-          ["Processing Report (TTB F 5110.28)", "Part II", "28", "Losses from dumping, mingling, etc.", report.processing.operationalLoss.toFixed(3)],
-          ["Storage Report (TTB F 5110.11)", "Part I", "2", "Spirits transferred in", report.storage.transferredIn.toFixed(3)],
-          ["Storage Report (TTB F 5110.11)", "Part II", "17", "Spirits transferred out", report.storage.transferredOut.toFixed(3)],
-          ["Storage Report (TTB F 5110.11)", "Part II", "18", "Losses (e.g., from samples, aging)", report.storage.storageLosses.toFixed(3)],
+          ["Production Report (TTB F 5110.40)", "Part I", "2", "Spirits produced by distillation", report.production.spiritsProduced.toFixed(2)],
+          ["Processing Report (TTB F 5110.28)", "Part I", "3", "Spirits received from storage", report.processing.transferredFromStorage.toFixed(2)],
+          ["Processing Report (TTB F 5110.28)", "Part II", "20", "Spirits dumped for bottling", report.processing.bottlingDump.toFixed(2)],
+          ["Processing Report (TTB F 5110.28)", "Part II", "26", "Bottling gains", report.processing.bottlingGain.toFixed(2)],
+          ["Processing Report (TTB F 5110.28)", "Part II", "27", "Bottling losses", report.processing.bottlingLoss.toFixed(2)],
+          ["Processing Report (TTB F 5110.28)", "Part II", "28", "Losses from dumping, mingling, etc.", report.processing.operationalLoss.toFixed(2)],
+          ["Storage Report (TTB F 5110.11)", "Part I", "2", "Spirits transferred in", report.storage.transferredIn.toFixed(2)],
+          ["Storage Report (TTB F 5110.11)", "Part II", "17", "Spirits transferred out", report.storage.transferredOut.toFixed(2)],
+          ["Storage Report (TTB F 5110.11)", "Part II", "18", "Losses (e.g., from samples, aging)", report.storage.storageLosses.toFixed(2)],
       ];
       const csvString = convertToCSV(data, headers);
       downloadCSV(csvString, `ttb_correlated_summary_${startDate}_to_${endDate}.csv`);
   };
   
   const ReportSection = ({ title, children }) => ( <div className="bg-gray-800 p-4 rounded-lg border border-gray-700"><h3 className="text-xl font-semibold text-blue-300 mb-3">{title}</h3><div className="space-y-2">{children}</div></div> );
-  const ReportRow = ({ form, part, line, description, value }) => ( <div className="grid grid-cols-12 gap-2 items-center text-sm hover:bg-gray-700/50 p-1 rounded"><div className="col-span-7 text-gray-300">{description}</div><div className="col-span-3 text-gray-400 text-xs text-right" title={`${form} - Part ${part}, Line ${line}`}>{form}, L {line}</div><div className="col-span-2 text-right font-mono text-blue-300">{value.toFixed(3)}</div></div> );
+  const ReportRow = ({ form, part, line, description, value }) => ( <div className="grid grid-cols-12 gap-2 items-center text-sm hover:bg-gray-700/50 p-1 rounded"><div className="col-span-7 text-gray-300">{description}</div><div className="col-span-3 text-gray-400 text-xs text-right" title={`${form} - Part ${part}, Line ${line}`}>{form}, L {line}</div><div className="col-span-2 text-right font-mono text-blue-300">{value.toFixed(2)}</div></div> );
 
   return(
        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-50">

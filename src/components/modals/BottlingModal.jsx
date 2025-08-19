@@ -81,7 +81,7 @@ export const BottlingModal = ({ db, userId, appId, container, onClose, setErrorA
               type: TRANSACTION_TYPES.BOTTLING_GAIN, containerId: container.id, containerName: container.name, productType, proof,
               netWeightLbsChange: lbsGain,
               proofGallonsChange: pgGain,
-              notes: `Gain of ${wgGain.toFixed(3)} WG recorded during bottling.`
+              notes: `Gain of ${wgGain.toFixed(2)} WG recorded during bottling.`
           };
           batch.set(doc(logCollRef), {...gainLog, timestamp: serverTimestamp()});
 
@@ -111,7 +111,7 @@ export const BottlingModal = ({ db, userId, appId, container, onClose, setErrorA
                       type: TRANSACTION_TYPES.BOTTLING_LOSS, containerId: container.id, containerName: container.name, productType, proof,
                       netWeightLbsChange: - (initialNetWeightLbs - bottlingCalcs.lbsBottled),
                       proofGallonsChange: - (initialProofGallons - bottlingCalcs.pgBottled),
-                      notes: `Remainder of ${bottlingCalcs.finalWg.toFixed(3)} WG written off as loss.`
+                      notes: `Remainder of ${bottlingCalcs.finalWg.toFixed(2)} WG written off as loss.`
                   };
                   batch.set(doc(logCollRef), {...lossLog, timestamp: serverTimestamp()});
               } else if (remainderAction === 'adjust') {
@@ -129,7 +129,7 @@ export const BottlingModal = ({ db, userId, appId, container, onClose, setErrorA
                       type: adjustmentType === 'loss' ? TRANSACTION_TYPES.BOTTLING_LOSS : TRANSACTION_TYPES.BOTTLING_GAIN, containerId: container.id, containerName: container.name, productType, proof,
                       netWeightLbsChange: adjLbs,
                       proofGallonsChange: adjPg,
-                      notes: `Manual bottling ${adjustmentType}: ${adjAmt.toFixed(3)} WG.`
+                      notes: `Manual bottling ${adjustmentType}: ${adjAmt.toFixed(2)} WG.`
                   };
                    batch.set(doc(logCollRef), {...adjLog, timestamp: serverTimestamp()});
               }
@@ -153,7 +153,7 @@ export const BottlingModal = ({ db, userId, appId, container, onClose, setErrorA
               <h2 className="text-xl mb-4 font-semibold text-sky-300">Bottle From: {container.name}</h2>
               {formError && <div className="bg-red-600 p-3 rounded mb-4 text-sm">{formError}</div>}
               <div className="space-y-4">
-                  <p className="text-sm text-gray-400"><strong>Available:</strong> {initialWineGallons.toFixed(3)} WG @ {proof} Proof</p>
+                  <p className="text-sm text-gray-400"><strong>Available:</strong> {initialWineGallons.toFixed(2)} WG @ {proof} Proof</p>
                   <div className="grid grid-cols-2 gap-4 p-4 border border-gray-700 rounded-lg">
                       <div>
                           <label htmlFor="bottleSize" className="block text-sm font-medium text-gray-300">Bottle Size</label>
@@ -169,11 +169,11 @@ export const BottlingModal = ({ db, userId, appId, container, onClose, setErrorA
 
                   {bottlingCalcs.isValid && (
                       <div className="bg-gray-700 p-3 rounded text-sm">
-                          <p><strong>Bottled Volume:</strong> {bottlingCalcs.wgBottled.toFixed(3)} WG / {bottlingCalcs.pgBottled.toFixed(3)} PG</p>
+                          <p><strong>Bottled Volume:</strong> {bottlingCalcs.wgBottled.toFixed(2)} WG / {bottlingCalcs.pgBottled.toFixed(2)} PG</p>
                           {bottlingCalcs.isGain ? (
-                               <p className="font-semibold text-green-400">Calculated Gain: {(-bottlingCalcs.finalWg).toFixed(3)} WG / {(-bottlingCalcs.finalWg * (proof/100)).toFixed(3)} PG</p>
+                               <p className="font-semibold text-green-400">Calculated Gain: {(-bottlingCalcs.finalWg).toFixed(2)} WG / {(-bottlingCalcs.finalWg * (proof/100)).toFixed(2)} PG</p>
                           ) : (
-                               <p><strong>Expected Remainder:</strong> <span className="font-semibold text-sky-300">{bottlingCalcs.finalWg.toFixed(3)} WG / {(bottlingCalcs.finalWg * (proof/100)).toFixed(3)} PG</span></p>
+                               <p><strong>Expected Remainder:</strong> <span className="font-semibold text-sky-300">{bottlingCalcs.finalWg.toFixed(2)} WG / {(bottlingCalcs.finalWg * (proof/100)).toFixed(2)} PG</span></p>
                           )}
                       </div>
                   )}
@@ -181,7 +181,7 @@ export const BottlingModal = ({ db, userId, appId, container, onClose, setErrorA
                   <div className="p-4 border border-gray-700 rounded-lg">
                       <h4 className="text-md font-semibold text-gray-300 mb-2">Finalize Container</h4>
                       {bottlingCalcs.isGain ? (
-                           <p className="text-sm text-green-400 bg-green-900/50 p-2 rounded">Container will be emptied and a gain of {(-bottlingCalcs.finalWg).toFixed(3)} WG will be recorded.</p>
+                           <p className="text-sm text-green-400 bg-green-900/50 p-2 rounded">Container will be emptied and a gain of {(-bottlingCalcs.finalWg).toFixed(2)} WG will be recorded.</p>
                       ) : (
                           <div className="space-y-2">
                               <label className="flex items-center space-x-2"><input type="radio" name="remainderAction" value="keep" checked={remainderAction === 'keep'} onChange={(e) => setRemainderAction(e.target.value)} className="form-radio text-sky-500" /><span>Keep remainder in container</span></label>
@@ -203,7 +203,7 @@ export const BottlingModal = ({ db, userId, appId, container, onClose, setErrorA
                                   <label htmlFor="adjustmentAmount" className="block text-xs font-medium text-gray-400">Amount (Wine Gallons)</label>
                                   <div className="flex items-center space-x-2">
                                       <input type="number" id="adjustmentAmount" value={adjustmentAmount} onChange={e => setAdjustmentAmount(e.target.value)} className="w-full bg-gray-600 p-2 rounded mt-1 text-sm" step="0.001" min="0" />
-                                      <span className="text-xs text-gray-400 whitespace-nowrap">({manualAdjustmentCalcs.pg.toFixed(3)} PG)</span>
+                                      <span className="text-xs text-gray-400 whitespace-nowrap">({manualAdjustmentCalcs.pg.toFixed(2)} PG)</span>
                                   </div>
                               </div>
                           </div>

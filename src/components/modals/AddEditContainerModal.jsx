@@ -24,8 +24,8 @@ export const AddEditContainerModal = ({ db, userId, appId, container, mode, prod
           let grossW = container.currentFill?.grossWeightLbs?.toString() || '';
           let prf = container.currentFill?.proof?.toString() || '';
           let fDate = container.currentFill?.fillDate || new Date().toISOString().split('T')[0];
-          let wgInput = container.currentFill?.wineGallons?.toFixed(3) || '';
-          let pgInput = container.currentFill?.proofGallons?.toFixed(3) || '';
+          let wgInput = container.currentFill?.wineGallons?.toFixed(2) || '';
+          let pgInput = container.currentFill?.proofGallons?.toFixed(2) || '';
 
           if (isRefillMode) { grossW = ''; prf = ''; wgInput = ''; pgInput = ''; fDate = new Date().toISOString().split('T')[0]; }
 
@@ -58,19 +58,19 @@ export const AddEditContainerModal = ({ db, userId, appId, container, mode, prod
       if (fillInputMethod === 'weight') {
           const gross = parseFloat(formData.grossWeightLbs) || tare;
           newCalculated = calculateDerivedValuesFromWeight(tare, gross, proofVal);
-          setWineGallonsInput(newCalculated.wineGallons.toFixed(3));
-          setProofGallonsInput(newCalculated.proofGallons.toFixed(3));
+          setWineGallonsInput(newCalculated.wineGallons.toFixed(2));
+          setProofGallonsInput(newCalculated.proofGallons.toFixed(2));
       } else if (fillInputMethod === 'wineGallons') {
           const wg = parseFloat(wineGallonsInput) || 0;
           newCalculated = calculateDerivedValuesFromWineGallons(wg, proofVal, tare);
           setFormData(f => ({ ...f, grossWeightLbs: newCalculated.grossWeightLbs.toFixed(2) }));
-          setProofGallonsInput(newCalculated.proofGallons.toFixed(3));
+          setProofGallonsInput(newCalculated.proofGallons.toFixed(2));
       } else if (fillInputMethod === 'proofGallons') {
           const pg = parseFloat(proofGallonsInput) || 0;
           if (proofVal === 0 && pg > 0) { /* Error caught by validateForm */ }
           newCalculated = calculateDerivedValuesFromProofGallons(pg, proofVal, tare);
           setFormData(f => ({ ...f, grossWeightLbs: newCalculated.grossWeightLbs.toFixed(2) }));
-          setWineGallonsInput(newCalculated.wineGallons.toFixed(3));
+          setWineGallonsInput(newCalculated.wineGallons.toFixed(2));
       }
       setCalculated(newCalculated);
 
@@ -282,9 +282,9 @@ export const AddEditContainerModal = ({ db, userId, appId, container, mode, prod
           {!isAddingEmpty && (!isAddingEmpty || mode === 'refill' || (isEditMode && container?.status === 'filled')) && <>
               <p className="text-sm">Gross Wt: {calculated.grossWeightLbs.toFixed(2)} lbs</p>
               <p className="text-sm">Net Wt: {calculated.netWeightLbs.toFixed(2)} lbs</p>
-              <p className="text-sm">Density: ~{calculated.spiritDensity?.toFixed(3)} lbs/gal</p>
-              <p className="text-sm">Wine Gal: {calculated.wineGallons.toFixed(3)} gal</p>
-              <p className="text-md font-bold">Proof Gal: {calculated.proofGallons.toFixed(3)} PG</p>
+              <p className="text-sm">Density: ~{calculated.spiritDensity?.toFixed(2)} lbs/gal</p>
+              <p className="text-sm">Wine Gal: {calculated.wineGallons.toFixed(2)} gal</p>
+              <p className="text-md font-bold">Proof Gal: {calculated.proofGallons.toFixed(2)} PG</p>
           </>}
            {isAddingEmpty && <p className="text-sm">Container will be added empty.</p>}
       </div>

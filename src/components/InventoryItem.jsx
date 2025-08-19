@@ -44,8 +44,8 @@ export const InventoryItem = ({ container, onEditInfo, onRefill, onTransfer, onS
                     <p><strong>Proof:</strong> {proof}</p>
                     <hr className="my-1 border-gray-700"/>
                     <p><strong>Net Product:</strong> {netWeightLbs} lbs</p>
-                    <p><strong>Wine Gallons:</strong> {wineGallons.toFixed(3)} gal</p>
-                    <p className="text-lg font-bold text-blue-400"><strong>Proof Gallons:</strong> {proofGallons.toFixed(3)} PG</p>
+                    <p><strong>Wine Gallons:</strong> {wineGallons.toFixed(2)} gal</p>
+                    <p className="text-lg font-bold text-blue-400"><strong>Proof Gallons:</strong> {proofGallons.toFixed(2)} PG</p>
                 </>)}
                 {status === 'empty' && emptiedDate && <p><strong>Last Emptied:</strong> {emptiedDate}</p>}
                 {status === 'empty' && !emptiedDate && <p>This container is currently empty.</p> }

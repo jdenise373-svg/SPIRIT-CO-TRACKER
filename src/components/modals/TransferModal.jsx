@@ -425,8 +425,8 @@ export const TransferModal = ({
               <h4 className="text-sm font-semibold mb-2 text-blue-300">Transfer Preview:</h4>
               <div className="text-sm space-y-1">
                 <p>Net Weight: {getTransferPreview().netWeight.toFixed(2)} lbs</p>
-                <p>Wine Gallons: {getTransferPreview().wineGallons.toFixed(3)} gal</p>
-                <p>Proof Gallons: {getTransferPreview().proofGallons.toFixed(3)} PG</p>
+                <p>Wine Gallons: {getTransferPreview().wineGallons.toFixed(2)} gal</p>
+                <p>Proof Gallons: {getTransferPreview().proofGallons.toFixed(2)} PG</p>
               </div>
             </div>
           )}
