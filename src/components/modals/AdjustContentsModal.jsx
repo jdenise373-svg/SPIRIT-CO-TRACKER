@@ -138,7 +138,7 @@ export const AdjustContentsModal = ({
     <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-50">
       <div className="bg-gray-800 p-6 rounded-lg shadow-xl w-full max-w-md">
         <h2 className="text-xl mb-4 text-yellow-300">
-          Sample/Adjust: {container.name}
+          Tank Adjust: {container.name}
         </h2>
         <p className="text-sm text-gray-400 mb-1">
           ({productType}) Available: {netWeightLbs.toFixed(2)} lbs /{" "}

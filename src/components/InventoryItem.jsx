@@ -57,7 +57,7 @@ export const InventoryItem = ({ container, onEditInfo, onRefill, onTransfer, onS
                     <button onClick={() => onBottle(container)} className="bg-sky-600 hover:bg-sky-500 text-xs py-2 px-3 rounded-md">Bottle</button>
                     <button onClick={() => onTransfer(container)} className="bg-purple-600 hover:bg-purple-500 text-xs py-2 px-3 rounded-md">Transfer</button>
                     <button onClick={() => onProofDown(container)} className="bg-cyan-600 hover:bg-cyan-500 text-xs py-2 px-3 rounded-md">Proof Down</button>
-                    <button onClick={() => onSample(container)} className="bg-yellow-600 hover:bg-yellow-500 text-xs py-2 px-3 rounded-md">Sample/Adjust</button>
+                    <button onClick={() => onSample(container)} className="bg-yellow-600 hover:bg-yellow-500 text-xs py-2 px-3 rounded-md">Tank Adjust</button>
                 </>) : (<button onClick={() => onRefill(container)} className="bg-green-600 hover:bg-green-500 text-xs py-2 px-3 rounded-md">{type === 'still' ? 'New Batch' : 'Refill'}</button>)}
                 <button onClick={() => onDelete(container.id)} className="bg-red-700 hover:bg-red-600 text-xs py-2 px-3 rounded-md">Delete</button>
             </div>
