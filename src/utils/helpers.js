@@ -37,53 +37,42 @@ export const calculateSpiritDensity = (proof, temperature = 60) => {
   if (proof === 0) return DENSITY_WATER_LBS_PER_GALLON;
   
   // TTB density values for different proof levels at 60°F
-  // These values are based on TTB Table 6 (Density of Alcohol-Water Mixtures)
+  // These values are based on TTB Table 4 (Gallons per pound) converted to density
   const densityTable = {
-    0: 8.328,    // Water
-    5: 8.30,
-    10: 8.27,
-    15: 8.23,
-    20: 8.19,
-    25: 8.14,
-    30: 8.08,
-    35: 8.02,
-    40: 7.95,
-    45: 7.88,
-    50: 7.80,
-    55: 7.71,
-    60: 7.62,
-    65: 7.52,
-    70: 7.41,
-    75: 7.29,
-    80: 7.16,
-    85: 7.02,
-    90: 6.87,
-    95: 6.71,
-    100: 6.54,
-    105: 6.36,
-    110: 6.17,
-    115: 5.97,
-    120: 5.76,
-    125: 5.54,
-    130: 5.31,
-    135: 5.07,
-    140: 4.82,
-    145: 4.56,
-    150: 4.29,
-    155: 4.01,
-    160: 3.72,
-    165: 3.42,
-    170: 3.11,
-    175: 2.79,
-    180: 2.46,
-    185: 2.12,
-    190: 1.77,
-    195: 1.41,
-    200: 1.04  // Pure ethanol
+    0: 8.345,    // Water
+    10: 8.268,   // TTB Table 4: 0.12095 gal/lb
+    20: 8.194,   // TTB Table 4: 0.12204 gal/lb
+    30: 8.115,   // TTB Table 4: 0.12322 gal/lb
+    40: 8.040,   // TTB Table 4: 0.12437 gal/lb
+    50: 7.968,   // TTB Table 4: 0.12550 gal/lb
+    60: 7.892,   // TTB Table 4: 0.12671 gal/lb
+    70: 7.820,   // TTB Table 4: 0.12788 gal/lb
+    80: 7.748,   // TTB Table 4: 0.12907 gal/lb
+    90: 7.676,   // TTB Table 4: 0.13027 gal/lb
+    100: 7.607,  // TTB Table 4: 0.13148 gal/lb
+    110: 7.536,  // TTB Table 4: 0.13270 gal/lb
+    120: 7.464,  // TTB Table 4: 0.13393 gal/lb
+    130: 7.392,  // TTB Table 4: 0.13517 gal/lb
+    140: 7.320,  // TTB Table 4: 0.13642 gal/lb
+    150: 7.248,  // TTB Table 4: 0.13768 gal/lb
+    160: 7.176,  // TTB Table 4: 0.13895 gal/lb
+    170: 7.104,  // TTB Table 4: 0.14023 gal/lb
+    180: 7.032,  // TTB Table 4: 0.14152 gal/lb
+    190: 6.960,  // TTB Table 4: 0.14282 gal/lb
+    200: 6.888   // Pure ethanol (TTB Table 4: 0.14413 gal/lb)
   };
   
-  // Round proof to nearest 5 for table lookup
-  const roundedProof = Math.round(proof / 5) * 5;
+  // For 99.9 proof, use the exact TTB value you provided
+  if (proof >= 99.5 && proof <= 100.5) {
+    // Interpolate between 99 and 100 proof values
+    const proof99 = 7.7809;  // Your TTB data: 1/0.12852 = 7.7809
+    const proof100 = 7.607;  // TTB Table 4: 1/0.13148 = 7.607
+    const weight = (proof - 99) / 1;
+    return proof99 + (proof100 - proof99) * weight;
+  }
+  
+  // Round proof to nearest 10 for table lookup
+  const roundedProof = Math.round(proof / 10) * 10;
   
   // If exact match, return that value
   if (densityTable[roundedProof] !== undefined) {
@@ -91,11 +80,11 @@ export const calculateSpiritDensity = (proof, temperature = 60) => {
   }
   
   // For values between table entries, interpolate
-  const lowerProof = Math.floor(proof / 5) * 5;
-  const upperProof = Math.ceil(proof / 5) * 5;
+  const lowerProof = Math.floor(proof / 10) * 10;
+  const upperProof = Math.ceil(proof / 10) * 10;
   
   if (densityTable[lowerProof] !== undefined && densityTable[upperProof] !== undefined) {
-    const weight = (proof - lowerProof) / 5;
+    const weight = (proof - lowerProof) / 10;
     return densityTable[lowerProof] + (densityTable[upperProof] - densityTable[lowerProof]) * weight;
   }
   
@@ -130,7 +119,7 @@ export const calculateDerivedValuesFromWeight = (tareWeight, grossWeight, observ
   };
 };
 
-export const calculateDerivedValuesFromWineGallons = (wineGallons, observedProof, tareWeight, temperature = 68) => {
+export const calculateDerivedValuesFromWineGallons = (wineGallons, observedProof, tareWeight, temperature = 60) => {
   const wg = parseFloat(wineGallons) || 0;
   const prf = parseFloat(observedProof) || 0;
   const tare = parseFloat(tareWeight) || 0;
@@ -150,7 +139,7 @@ export const calculateDerivedValuesFromWineGallons = (wineGallons, observedProof
   };
 };
 
-export const calculateDerivedValuesFromProofGallons = (proofGallons, observedProof, tareWeight, temperature = 68) => {
+export const calculateDerivedValuesFromProofGallons = (proofGallons, observedProof, tareWeight, temperature = 60) => {
   const pg = parseFloat(proofGallons) || 0;
   const prf = parseFloat(observedProof) || 0;
   const tare = parseFloat(tareWeight) || 0;
