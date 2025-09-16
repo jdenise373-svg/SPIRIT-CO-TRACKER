@@ -783,25 +783,25 @@ export const ViewLogModal = ({
                       </td>
                       <td
                         className={`px-6 py-3 whitespace-nowrap ${
-                          log.netWeightLbsChange > 0
+                          (parseFloat(log.netWeightLbsChange) || 0) > 0
                             ? "text-green-400"
-                            : log.netWeightLbsChange < 0
+                            : (parseFloat(log.netWeightLbsChange) || 0) < 0
                             ? "text-red-400"
                             : "text-gray-300"
                         }`}
                       >
-                        {log.netWeightLbsChange?.toFixed(2) || 0}
+                        {(parseFloat(log.netWeightLbsChange) || 0).toFixed(2)}
                       </td>
                       <td
                         className={`px-6 py-3 whitespace-nowrap ${
-                          log.proofGallonsChange > 0
+                          (parseFloat(log.proofGallonsChange) || 0) > 0
                             ? "text-green-400"
-                            : log.proofGallonsChange < 0
+                            : (parseFloat(log.proofGallonsChange) || 0) < 0
                             ? "text-red-400"
                             : "text-gray-300"
                         }`}
                       >
-                        {log.proofGallonsChange?.toFixed(2) || 0}
+                        {(parseFloat(log.proofGallonsChange) || 0).toFixed(2)}
                       </td>
                       <td
                         className="px-6 py-3 text-gray-400 text-sm max-w-xs truncate"
