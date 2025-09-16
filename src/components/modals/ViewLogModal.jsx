@@ -30,8 +30,8 @@ export const ViewLogModal = ({
   const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
   const [transactionToRemove, setTransactionToRemove] = useState(null);
   const [removeSuccess, setRemoveSuccess] = useState(false);
-  const [sortField, setSortField] = useState('timestamp');
-  const [sortDirection, setSortDirection] = useState('desc');
+  const [sortField, setSortField] = useState("timestamp");
+  const [sortDirection, setSortDirection] = useState("desc");
 
   const handleExportLog = () => {
     const headers = [
@@ -71,55 +71,55 @@ export const ViewLogModal = ({
 
   const handleSort = (field) => {
     if (sortField === field) {
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
     } else {
       setSortField(field);
-      setSortDirection('asc');
+      setSortDirection("asc");
     }
   };
 
   const getSortedLog = () => {
     if (!transactionLog || transactionLog.length === 0) return [];
-    
+
     return [...transactionLog].sort((a, b) => {
       let aValue, bValue;
-      
+
       switch (sortField) {
-        case 'timestamp':
+        case "timestamp":
           aValue = a.timestamp?.toDate ? a.timestamp.toDate() : new Date(0);
           bValue = b.timestamp?.toDate ? b.timestamp.toDate() : new Date(0);
           break;
-        case 'type':
-          aValue = (a.type || '').toLowerCase();
-          bValue = (b.type || '').toLowerCase();
+        case "type":
+          aValue = (a.type || "").toLowerCase();
+          bValue = (b.type || "").toLowerCase();
           break;
-        case 'containerName':
-          aValue = (a.containerName || '').toLowerCase();
-          bValue = (b.containerName || '').toLowerCase();
+        case "containerName":
+          aValue = (a.containerName || "").toLowerCase();
+          bValue = (b.containerName || "").toLowerCase();
           break;
-        case 'productType':
-          aValue = (a.productType || '').toLowerCase();
-          bValue = (b.productType || '').toLowerCase();
+        case "productType":
+          aValue = (a.productType || "").toLowerCase();
+          bValue = (b.productType || "").toLowerCase();
           break;
-        case 'proof':
+        case "proof":
           aValue = a.proof || 0;
           bValue = b.proof || 0;
           break;
-        case 'netWeightLbsChange':
+        case "netWeightLbsChange":
           aValue = a.netWeightLbsChange || 0;
           bValue = b.netWeightLbsChange || 0;
           break;
-        case 'proofGallonsChange':
+        case "proofGallonsChange":
           aValue = a.proofGallonsChange || 0;
           bValue = b.proofGallonsChange || 0;
           break;
         default:
-          aValue = a[sortField] || '';
-          bValue = b[sortField] || '';
+          aValue = a[sortField] || "";
+          bValue = b[sortField] || "";
       }
-      
-      if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
-      if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
+
+      if (aValue < bValue) return sortDirection === "asc" ? -1 : 1;
+      if (aValue > bValue) return sortDirection === "asc" ? 1 : -1;
       return 0;
     });
   };
@@ -721,32 +721,38 @@ export const ViewLogModal = ({
                 <thead className="bg-gray-750 sticky top-0 z-10">
                   <tr>
                     {[
-                      { key: 'timestamp', label: 'Date' },
-                      { key: 'type', label: 'Type' },
-                      { key: 'containerName', label: 'Container' },
-                      { key: 'productType', label: 'Product' },
-                      { key: 'proof', label: 'Proof' },
-                      { key: 'netWeightLbsChange', label: 'Net Wt Δ' },
-                      { key: 'proofGallonsChange', label: 'PG Δ' },
-                      { key: 'notes', label: 'Notes/Xfer' },
-                      { key: 'actions', label: 'Actions' },
+                      { key: "timestamp", label: "Date" },
+                      { key: "type", label: "Type" },
+                      { key: "containerName", label: "Container" },
+                      { key: "productType", label: "Product" },
+                      { key: "proof", label: "Proof" },
+                      { key: "netWeightLbsChange", label: "Net Wt Δ" },
+                      { key: "proofGallonsChange", label: "PG Δ" },
+                      { key: "notes", label: "Notes/Xfer" },
+                      { key: "actions", label: "Actions" },
                     ].map((column) => (
                       <th
                         key={column.key}
                         className={`px-6 py-4 text-left font-semibold text-gray-200 tracking-wider whitespace-nowrap bg-gray-750 text-base ${
-                          column.key !== 'notes' && column.key !== 'actions' 
-                            ? 'cursor-pointer hover:bg-gray-700 select-none' 
-                            : ''
+                          column.key !== "notes" && column.key !== "actions"
+                            ? "cursor-pointer hover:bg-gray-700 select-none"
+                            : ""
                         }`}
-                        onClick={() => column.key !== 'notes' && column.key !== 'actions' ? handleSort(column.key) : null}
+                        onClick={() =>
+                          column.key !== "notes" && column.key !== "actions"
+                            ? handleSort(column.key)
+                            : null
+                        }
                       >
                         <div className="flex items-center space-x-2">
                           <span>{column.label}</span>
-                          {column.key !== 'notes' && column.key !== 'actions' && sortField === column.key && (
-                            <span className="text-blue-400">
-                              {sortDirection === 'asc' ? '↑' : '↓'}
-                            </span>
-                          )}
+                          {column.key !== "notes" &&
+                            column.key !== "actions" &&
+                            sortField === column.key && (
+                              <span className="text-blue-400">
+                                {sortDirection === "asc" ? "↑" : "↓"}
+                              </span>
+                            )}
                         </div>
                       </th>
                     ))}
@@ -988,9 +994,9 @@ export const ViewLogModal = ({
               </p>
               <p className="text-sm text-orange-300 mt-3">
                 <strong>⚠️ Warning:</strong> This will permanently delete this
-                log entry and reverse the container state changes (if applicable)
-                to its previous state. This is useful for cleaning up duplicate
-                entries or correcting data entry errors.
+                log entry and reverse the container state changes (if
+                applicable) to its previous state. This is useful for cleaning
+                up duplicate entries or correcting data entry errors.
               </p>
               <p className="text-sm text-gray-400 mt-2">
                 This action cannot be undone and will leave no audit trail of

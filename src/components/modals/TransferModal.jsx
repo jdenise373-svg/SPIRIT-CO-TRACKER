@@ -29,41 +29,45 @@ export const TransferModal = ({
   const [transferAll, setTransferAll] = useState(false);
   const [formError, setFormError] = useState("");
   const [isTransferring, setIsTransferring] = useState(false);
-  
+
   const sourceMaxNet = sourceContainer.currentFill?.netWeightLbs || 0;
   const sourceMaxWineGallons = sourceContainer.currentFill?.wineGallons || 0;
   const sourceMaxProofGallons = sourceContainer.currentFill?.proofGallons || 0;
   const sourceProof = sourceContainer.currentFill?.proof || 0;
   const sourceProductType =
     sourceContainer.currentFill?.productType || "Unspecified Spirit";
-  
+
   // Modified to allow both empty containers and filled containers with same spirit type
   const availableDestinations = allContainers.filter((c) => {
     if (c.id === sourceContainer.id) return false;
-    
+
     // Allow empty containers
     if (c.status === "empty") return true;
-    
+
     // Allow filled containers with the same spirit type for combining
-    if (c.status === "filled" && 
-        c.currentFill?.productType === sourceProductType &&
-        c.currentFill?.productType !== "Unspecified Spirit") {
+    if (
+      c.status === "filled" &&
+      c.currentFill?.productType === sourceProductType &&
+      c.currentFill?.productType !== "Unspecified Spirit"
+    ) {
       return true;
     }
-    
+
     return false;
   });
 
   // Helper function to calculate combined proof when combining spirits
   const calculateCombinedProof = (proof1, weight1, proof2, weight2) => {
     if (weight1 <= 0 || weight2 <= 0) return proof1 || proof2 || 0;
-    return ((proof1 * weight1) + (proof2 * weight2)) / (weight1 + weight2);
+    return (proof1 * weight1 + proof2 * weight2) / (weight1 + weight2);
   };
 
   // Helper function to check if destination is for combining spirits
   const isCombiningSpirits = (destContainer) => {
-    return destContainer.status === "filled" && 
-           destContainer.currentFill?.productType === sourceProductType;
+    return (
+      destContainer.status === "filled" &&
+      destContainer.currentFill?.productType === sourceProductType
+    );
   };
 
   useEffect(() => {
@@ -76,17 +80,23 @@ export const TransferModal = ({
         setTransferProofGallons(sourceMaxProofGallons.toString());
       }
     }
-  }, [transferAll, transferUnit, sourceMaxNet, sourceMaxWineGallons, sourceMaxProofGallons]);
+  }, [
+    transferAll,
+    transferUnit,
+    sourceMaxNet,
+    sourceMaxWineGallons,
+    sourceMaxProofGallons,
+  ]);
 
   const handleTransfer = async () => {
     if (isTransferring) return; // Prevent multiple transfers
-    
+
     setFormError("");
     setIsTransferring(true);
-    
+
     let netToTransfer = 0;
     let transferValue = 0;
-    
+
     // Validate transfer value based on selected unit
     if (transferUnit === "weight") {
       transferValue = parseFloat(transferWeightNet);
@@ -109,17 +119,25 @@ export const TransferModal = ({
         return;
       }
       if (transferValue > sourceMaxWineGallons + 0.001) {
-        setFormError(`Cannot transfer > ${sourceMaxWineGallons.toFixed(2)} wine gallons.`);
+        setFormError(
+          `Cannot transfer > ${sourceMaxWineGallons.toFixed(2)} wine gallons.`
+        );
         setIsTransferring(false);
         return;
       }
       if (sourceProof <= 0) {
-        setFormError("Cannot transfer by wine gallons when proof is 0 or undefined.");
+        setFormError(
+          "Cannot transfer by wine gallons when proof is 0 or undefined."
+        );
         setIsTransferring(false);
         return;
       }
       // Use helper function to convert wine gallons to net weight
-      const wineGalCalcs = calculateDerivedValuesFromWineGallons(transferValue, sourceProof, 0);
+      const wineGalCalcs = calculateDerivedValuesFromWineGallons(
+        transferValue,
+        sourceProof,
+        0
+      );
       netToTransfer = wineGalCalcs.netWeightLbs;
     } else if (transferUnit === "proofGallons") {
       transferValue = parseFloat(transferProofGallons);
@@ -129,17 +147,25 @@ export const TransferModal = ({
         return;
       }
       if (transferValue > sourceMaxProofGallons + 0.001) {
-        setFormError(`Cannot transfer > ${sourceMaxProofGallons.toFixed(2)} proof gallons.`);
+        setFormError(
+          `Cannot transfer > ${sourceMaxProofGallons.toFixed(2)} proof gallons.`
+        );
         setIsTransferring(false);
         return;
       }
       if (sourceProof <= 0) {
-        setFormError("Cannot transfer by proof gallons when proof is 0 or undefined.");
+        setFormError(
+          "Cannot transfer by proof gallons when proof is 0 or undefined."
+        );
         setIsTransferring(false);
         return;
       }
       // Use helper function to convert proof gallons to net weight
-      const proofGalCalcs = calculateDerivedValuesFromProofGallons(transferValue, sourceProof, 0);
+      const proofGalCalcs = calculateDerivedValuesFromProofGallons(
+        transferValue,
+        sourceProof,
+        0
+      );
       netToTransfer = proofGalCalcs.netWeightLbs;
     }
 
@@ -157,13 +183,16 @@ export const TransferModal = ({
     }
 
     // Check if this is a valid destination (empty or same spirit type for combining)
-    const isValidDestination = destContainerData.status === "empty" || 
-                              (destContainerData.status === "filled" && 
-                               destContainerData.currentFill?.productType === sourceProductType &&
-                               destContainerData.currentFill?.productType !== "Unspecified Spirit");
-    
+    const isValidDestination =
+      destContainerData.status === "empty" ||
+      (destContainerData.status === "filled" &&
+        destContainerData.currentFill?.productType === sourceProductType &&
+        destContainerData.currentFill?.productType !== "Unspecified Spirit");
+
     if (!isValidDestination) {
-      setFormError("Invalid destination. Can only transfer to empty containers or combine with same spirit type.");
+      setFormError(
+        "Invalid destination. Can only transfer to empty containers or combine with same spirit type."
+      );
       setIsTransferring(false);
       return;
     }
@@ -180,7 +209,7 @@ export const TransferModal = ({
         `artifacts/${appId}/users/${userId}/spiritInventory`,
         destinationId
       );
-      
+
       const sourceSpiritDensity = calculateSpiritDensity(sourceProof);
       const wgTransferred =
         sourceSpiritDensity > 0 ? netToTransfer / sourceSpiritDensity : 0;
@@ -222,7 +251,7 @@ export const TransferModal = ({
         "currentFill.emptiedDate": srcEmptiedDate,
         "currentFill.spiritDensity": srcCalcs.spiritDensity,
       });
-      
+
       logTransaction(db, userId, appId, {
         type: TRANSACTION_TYPES.TRANSFER_OUT,
         containerId: sourceContainer.id,
@@ -238,10 +267,11 @@ export const TransferModal = ({
 
       // Handle destination container update - either fill empty or combine spirits
       let destCalcs, finalDestProof, finalDestProductType, finalDestFillDate;
-      
+
       if (destContainerData.status === "empty") {
         // Fill empty container
-        const newDestGrossNum = (parseFloat(destContainerData.tareWeightLbs) || 0) + netToTransfer;
+        const newDestGrossNum =
+          (parseFloat(destContainerData.tareWeightLbs) || 0) + netToTransfer;
         destCalcs = calculateDerivedValuesFromWeight(
           parseFloat(destContainerData.tareWeightLbs) || 0,
           newDestGrossNum,
@@ -252,31 +282,38 @@ export const TransferModal = ({
         finalDestFillDate = new Date().toISOString().split("T")[0];
       } else {
         // Combine spirits - calculate new combined proof and values
-        const existingNetWeight = destContainerData.currentFill?.netWeightLbs || 0;
+        const existingNetWeight =
+          destContainerData.currentFill?.netWeightLbs || 0;
         const existingProof = destContainerData.currentFill?.proof || 0;
-        const existingGrossWeight = destContainerData.currentFill?.grossWeightLbs || 
-                                   parseFloat(destContainerData.tareWeightLbs) || 0;
-        
+        const existingGrossWeight =
+          destContainerData.currentFill?.grossWeightLbs ||
+          parseFloat(destContainerData.tareWeightLbs) ||
+          0;
+
         // Calculate combined proof using weighted average
         finalDestProof = calculateCombinedProof(
-          existingProof, existingNetWeight,
-          sourceProof, netToTransfer
+          existingProof,
+          existingNetWeight,
+          sourceProof,
+          netToTransfer
         );
-        
+
         // Calculate new combined values
         const totalNetWeight = existingNetWeight + netToTransfer;
         const newDestGrossNum = existingGrossWeight + netToTransfer;
-        
+
         destCalcs = calculateDerivedValuesFromWeight(
           parseFloat(destContainerData.tareWeightLbs) || 0,
           newDestGrossNum,
           finalDestProof
         );
-        
+
         finalDestProductType = sourceProductType;
-        finalDestFillDate = destContainerData.currentFill?.fillDate || new Date().toISOString().split("T")[0];
+        finalDestFillDate =
+          destContainerData.currentFill?.fillDate ||
+          new Date().toISOString().split("T")[0];
       }
-      
+
       batch.update(destRef, {
         status: "filled",
         "currentFill.productType": finalDestProductType,
@@ -287,10 +324,11 @@ export const TransferModal = ({
         "currentFill.wineGallons": destCalcs.wineGallons,
         "currentFill.proofGallons": destCalcs.proofGallons,
         "currentFill.spiritDensity": destCalcs.spiritDensity,
-        "currentFill.account": sourceContainer.currentFill?.account || "storage",
+        "currentFill.account":
+          sourceContainer.currentFill?.account || "storage",
         "currentFill.emptiedDate": null,
       });
-      
+
       logTransaction(db, userId, appId, {
         type: TRANSACTION_TYPES.TRANSFER_IN,
         containerId: destinationId,
@@ -301,8 +339,12 @@ export const TransferModal = ({
         proofGallonsChange: pgTransferred,
         sourceContainerId: sourceContainer.id,
         sourceContainerName: sourceContainer.name,
-        notes: isCombiningSpirits(destContainerData) 
-          ? `Combined from ${sourceContainer.name} (${sourceProof} proof) with existing ${destContainerData.currentFill?.proof || 0} proof = ${finalDestProof.toFixed(1)} proof`
+        notes: isCombiningSpirits(destContainerData)
+          ? `Combined from ${
+              sourceContainer.name
+            } (${sourceProof} proof) with existing ${
+              destContainerData.currentFill?.proof || 0
+            } proof = ${finalDestProof.toFixed(1)} proof`
           : `From ${sourceContainer.name}`,
       });
 
@@ -337,11 +379,11 @@ export const TransferModal = ({
   // Calculate what the transfer will actually transfer based on current input
   const getTransferPreview = () => {
     if (!destinationId) return null;
-    
+
     let netWeight = 0;
     let wineGallons = 0;
     let proofGallons = 0;
-    
+
     if (transferUnit === "weight" && transferWeightNet) {
       netWeight = parseFloat(transferWeightNet);
       const spiritDensity = calculateSpiritDensity(sourceProof);
@@ -349,42 +391,53 @@ export const TransferModal = ({
       proofGallons = wineGallons * (sourceProof / 100);
     } else if (transferUnit === "wineGallons" && transferWineGallons) {
       wineGallons = parseFloat(transferWineGallons);
-      const calcs = calculateDerivedValuesFromWineGallons(wineGallons, sourceProof, 0);
+      const calcs = calculateDerivedValuesFromWineGallons(
+        wineGallons,
+        sourceProof,
+        0
+      );
       netWeight = calcs.netWeightLbs;
       proofGallons = calcs.proofGallons;
     } else if (transferUnit === "proofGallons" && transferProofGallons) {
       proofGallons = parseFloat(transferProofGallons);
-      const calcs = calculateDerivedValuesFromProofGallons(proofGallons, sourceProof, 0);
+      const calcs = calculateDerivedValuesFromProofGallons(
+        proofGallons,
+        sourceProof,
+        0
+      );
       netWeight = calcs.netWeightLbs;
       wineGallons = calcs.wineGallons;
     }
-    
+
     return { netWeight, wineGallons, proofGallons };
   };
 
   // Calculate the combined result when transferring to a filled container
   const getCombinedResultPreview = () => {
     if (!destinationId) return null;
-    
-    const destContainer = allContainers.find(c => c.id === destinationId);
+
+    const destContainer = allContainers.find((c) => c.id === destinationId);
     if (!destContainer || !isCombiningSpirits(destContainer)) return null;
-    
+
     const transferPreview = getTransferPreview();
     if (!transferPreview) return null;
-    
+
     const existingNetWeight = destContainer.currentFill?.netWeightLbs || 0;
     const existingProof = destContainer.currentFill?.proof || 0;
-    
+
     const combinedNetWeight = existingNetWeight + transferPreview.netWeight;
     const combinedProof = calculateCombinedProof(
-      existingProof, existingNetWeight,
-      sourceProof, transferPreview.netWeight
+      existingProof,
+      existingNetWeight,
+      sourceProof,
+      transferPreview.netWeight
     );
-    
+
     const spiritDensity = calculateSpiritDensity(combinedProof);
-    const combinedWineGallons = spiritDensity > 0 ? combinedNetWeight / spiritDensity : 0;
+    const combinedWineGallons =
+      spiritDensity > 0 ? combinedNetWeight / spiritDensity : 0;
     const combinedProofGallons = combinedWineGallons * (combinedProof / 100);
-    
+
     return {
       existingNetWeight,
       existingProof,
@@ -393,7 +446,7 @@ export const TransferModal = ({
       combinedNetWeight,
       combinedProof,
       combinedWineGallons,
-      combinedProofGallons
+      combinedProofGallons,
     };
   };
 
@@ -404,10 +457,13 @@ export const TransferModal = ({
           Transfer From: {sourceContainer.name}
         </h2>
         <p className="text-sm text-gray-400 mb-1">
-          ({sourceProductType}) Available: {sourceMaxNet.toFixed(2)} lbs, {sourceMaxWineGallons.toFixed(2)} wine gal, {sourceMaxProofGallons.toFixed(2)} proof gal at {sourceProof} proof.
+          ({sourceProductType}) Available: {sourceMaxNet.toFixed(2)} lbs,{" "}
+          {sourceMaxWineGallons.toFixed(2)} wine gal,{" "}
+          {sourceMaxProofGallons.toFixed(2)} proof gal at {sourceProof} proof.
         </p>
         <p className="text-xs text-blue-400 mb-3">
-          💡 You can transfer to empty containers or combine with other {sourceProductType} containers
+          💡 You can transfer to empty containers or combine with other{" "}
+          {sourceProductType} containers
         </p>
         {formError && (
           <div className="bg-red-600 p-2 rounded mb-3 text-sm">{formError}</div>
@@ -433,7 +489,8 @@ export const TransferModal = ({
                 const existingNetWeight = c.currentFill?.netWeightLbs || 0;
                 return (
                   <option key={c.id} value={c.id}>
-                    {c.name} - Combine with {existingNetWeight.toFixed(2)} lbs at {existingProof} proof
+                    {c.name} - Combine with {existingNetWeight.toFixed(2)} lbs
+                    at {existingProof} proof
                   </option>
                 );
               }
@@ -482,9 +539,16 @@ export const TransferModal = ({
               </label>
             </div>
             <div className="text-xs text-gray-500 mt-1">
-              <p>• <strong>Weight:</strong> Direct net weight transfer in pounds</p>
-              <p>• <strong>Wine Gal:</strong> Volume-based transfer (accounts for proof)</p>
-              <p>• <strong>Proof Gal:</strong> Standard proof gallon measurement</p>
+              <p>
+                • <strong>Weight:</strong> Direct net weight transfer in pounds
+              </p>
+              <p>
+                • <strong>Wine Gal:</strong> Volume-based transfer (accounts for
+                proof)
+              </p>
+              <p>
+                • <strong>Proof Gal:</strong> Standard proof gallon measurement
+              </p>
             </div>
           </div>
 
@@ -556,11 +620,21 @@ export const TransferModal = ({
           {/* Transfer Preview */}
           {getTransferPreview() && (
             <div className="bg-gray-750 p-3 rounded border border-gray-600">
-              <h4 className="text-sm font-semibold mb-2 text-blue-300">Transfer Preview:</h4>
+              <h4 className="text-sm font-semibold mb-2 text-blue-300">
+                Transfer Preview:
+              </h4>
               <div className="text-sm space-y-1">
-                <p>Net Weight: {getTransferPreview().netWeight.toFixed(2)} lbs</p>
-                <p>Wine Gallons: {getTransferPreview().wineGallons.toFixed(2)} gal</p>
-                <p>Proof Gallons: {getTransferPreview().proofGallons.toFixed(2)} PG</p>
+                <p>
+                  Net Weight: {getTransferPreview().netWeight.toFixed(2)} lbs
+                </p>
+                <p>
+                  Wine Gallons: {getTransferPreview().wineGallons.toFixed(2)}{" "}
+                  gal
+                </p>
+                <p>
+                  Proof Gallons: {getTransferPreview().proofGallons.toFixed(2)}{" "}
+                  PG
+                </p>
               </div>
             </div>
           )}
@@ -568,18 +642,24 @@ export const TransferModal = ({
           {/* Combined Result Preview - when combining spirits */}
           {getCombinedResultPreview() && (
             <div className="bg-blue-900 p-3 rounded border border-blue-600">
-              <h4 className="text-sm font-semibold mb-2 text-blue-200">Combined Result Preview:</h4>
+              <h4 className="text-sm font-semibold mb-2 text-blue-200">
+                Combined Result Preview:
+              </h4>
               <div className="text-sm space-y-1">
                 <p className="text-blue-100">
-                  <span className="font-medium">Existing:</span> {getCombinedResultPreview().existingNetWeight.toFixed(2)} lbs at {getCombinedResultPreview().existingProof} proof
+                  <span className="font-medium">Existing:</span>{" "}
+                  {getCombinedResultPreview().existingNetWeight.toFixed(2)} lbs
+                  at {getCombinedResultPreview().existingProof} proof
                 </p>
                 <p className="text-blue-100">
-                  <span className="font-medium">Adding:</span> {getCombinedResultPreview().transferNetWeight.toFixed(2)} lbs at {getCombinedResultPreview().transferProof} proof
+                  <span className="font-medium">Adding:</span>{" "}
+                  {getCombinedResultPreview().transferNetWeight.toFixed(2)} lbs
+                  at {getCombinedResultPreview().transferProof} proof
                 </p>
               </div>
             </div>
           )}
-          
+
           <div className="flex justify-end space-x-3 pt-3">
             <Button
               type="button"

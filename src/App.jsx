@@ -1,9 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { auth as firebaseAuth, db as firebaseDB } from "./Firebase"; // adjust path if needed
-import {
-  onAuthStateChanged,
-  signOut,
-} from "firebase/auth";
+import { onAuthStateChanged, signOut } from "firebase/auth";
 import AuthScreen from "./AuthScreen";
 import {
   collection,
@@ -20,7 +17,7 @@ import { ProductionView } from "./components/ProductionView";
 import { DropdownButton, DropdownItem } from "./components/DropdownButton";
 import { APP_NAME, DEFAULT_PRODUCTS, TRANSACTION_TYPES } from "./constants";
 
-import { 
+import {
   AddEditContainerModal,
   AddEditProductionModal,
   TransferModal,
@@ -32,7 +29,7 @@ import {
   ImportContainersModal,
   TtbReportModal,
   ConfirmationModal,
-  ChangeAccountModal
+  ChangeAccountModal,
 } from "./components/modals";
 
 import { convertToCSV, downloadCSV, logTransaction } from "./utils/helpers";
@@ -44,8 +41,6 @@ function App() {
   const [auth, setAuth] = useState(null);
   const [userId, setUserId] = useState(null);
   const [isAuthReady, setIsAuthReady] = useState(false);
-
-
 
   const [userEmail, setUserEmail] = useState(null); // Add this line
   // ... other state variables
@@ -104,8 +99,6 @@ function App() {
 
     return () => unsubscribe();
   }, []);
-
-
 
   const handleLogout = async () => {
     try {
@@ -397,8 +390,12 @@ function App() {
           containerName: item.name,
           productType: item.currentFill?.productType || null,
           proof: (item.currentFill?.proof || 0).toFixed(2),
-          netWeightLbsChange: (-(item.currentFill?.netWeightLbs || 0)).toFixed(2),
-          proofGallonsChange: (-(item.currentFill?.proofGallons || 0)).toFixed(2),
+          netWeightLbsChange: (-(item.currentFill?.netWeightLbs || 0)).toFixed(
+            2
+          ),
+          proofGallonsChange: (-(item.currentFill?.proofGallons || 0)).toFixed(
+            2
+          ),
           notes: "Container deleted.",
         };
       } else if (type === "product") {
@@ -649,9 +646,7 @@ function App() {
           }
         />
       )}
-      {isAuthReady && !userId && (
-        <AuthScreen />
-      )}
+      {isAuthReady && !userId && <AuthScreen />}
       {isAuthReady &&
         userId && ( // Add userId check here
           <>
@@ -804,7 +799,9 @@ function App() {
           onLogUpdated={() => {
             // Force a refresh of the transaction log
             // The onSnapshot should handle this automatically, but this ensures it
-            console.log("Log updated, transaction log should refresh automatically");
+            console.log(
+              "Log updated, transaction log should refresh automatically"
+            );
           }}
         />
       )}

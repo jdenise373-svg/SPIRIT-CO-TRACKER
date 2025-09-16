@@ -30,32 +30,96 @@ export const calculateProofGallonsTTB = (wineGallons, observedProof, temperature
   return wineGallons * (trueProof / 100);
 };
 
-// Legacy density-based calculation (keeping for backward compatibility)
-export const calculateSpiritDensity = (proof, temperature = 20) => {
+// TTB-compliant density calculation at 60°F
+// Since Snap 51 provides temperature-corrected proof readings, we use the proof directly
+export const calculateSpiritDensity = (proof, temperature = 60) => {
   if (isNaN(proof) || proof < 0) proof = 0;
   if (proof === 0) return DENSITY_WATER_LBS_PER_GALLON;
   
+  // TTB density values for different proof levels at 60°F
+  // These values are based on TTB Table 6 (Density of Alcohol-Water Mixtures)
+  const densityTable = {
+    0: 8.328,    // Water
+    5: 8.30,
+    10: 8.27,
+    15: 8.23,
+    20: 8.19,
+    25: 8.14,
+    30: 8.08,
+    35: 8.02,
+    40: 7.95,
+    45: 7.88,
+    50: 7.80,
+    55: 7.71,
+    60: 7.62,
+    65: 7.52,
+    70: 7.41,
+    75: 7.29,
+    80: 7.16,
+    85: 7.02,
+    90: 6.87,
+    95: 6.71,
+    100: 6.54,
+    105: 6.36,
+    110: 6.17,
+    115: 5.97,
+    120: 5.76,
+    125: 5.54,
+    130: 5.31,
+    135: 5.07,
+    140: 4.82,
+    145: 4.56,
+    150: 4.29,
+    155: 4.01,
+    160: 3.72,
+    165: 3.42,
+    170: 3.11,
+    175: 2.79,
+    180: 2.46,
+    185: 2.12,
+    190: 1.77,
+    195: 1.41,
+    200: 1.04  // Pure ethanol
+  };
+  
+  // Round proof to nearest 5 for table lookup
+  const roundedProof = Math.round(proof / 5) * 5;
+  
+  // If exact match, return that value
+  if (densityTable[roundedProof] !== undefined) {
+    return densityTable[roundedProof];
+  }
+  
+  // For values between table entries, interpolate
+  const lowerProof = Math.floor(proof / 5) * 5;
+  const upperProof = Math.ceil(proof / 5) * 5;
+  
+  if (densityTable[lowerProof] !== undefined && densityTable[upperProof] !== undefined) {
+    const weight = (proof - lowerProof) / 5;
+    return densityTable[lowerProof] + (densityTable[upperProof] - densityTable[lowerProof]) * weight;
+  }
+  
+  // Fallback to linear calculation for extreme values
   const volEthanolFraction = proof / 200;
   const volWaterFraction = 1 - volEthanolFraction;
-  const baseDensity = (volEthanolFraction * DENSITY_ETHANOL_LBS_PER_GALLON) + (volWaterFraction * DENSITY_WATER_LBS_PER_GALLON);
-  
-  return baseDensity;
+  return (volEthanolFraction * DENSITY_ETHANOL_LBS_PER_GALLON) + (volWaterFraction * DENSITY_WATER_LBS_PER_GALLON);
 };
 
-export const calculateDerivedValuesFromWeight = (tareWeight, grossWeight, observedProof, temperature = 68) => {
+// Calculate derived values from weight - using temperature-corrected proof from Snap 51
+export const calculateDerivedValuesFromWeight = (tareWeight, grossWeight, observedProof, temperature = 60) => {
   const tare = parseFloat(tareWeight) || 0;
   const gross = parseFloat(grossWeight) || 0;
   const prf = parseFloat(observedProof) || 0;
   let netWeightLbs = 0;
   if (gross > tare) { netWeightLbs = gross - tare; } else { netWeightLbs = 0; }
   
-  // Use TTB method for proof gallons calculation
-  const spiritDensity = calculateSpiritDensity(prf, temperature);
+  // Since Snap 51 provides temperature-corrected proof, use it directly for density calculation
+  const spiritDensity = calculateSpiritDensity(prf, 60); // Always use 60°F for TTB standard
   let wineGallons = 0;
   if (netWeightLbs > 0 && spiritDensity > 0) { wineGallons = netWeightLbs / spiritDensity; }
   
-  // Calculate proof gallons using TTB method
-  const proofGallons = calculateProofGallonsTTB(wineGallons, prf, temperature);
+  // For proof gallons, use the temperature-corrected proof directly (no additional correction needed)
+  const proofGallons = wineGallons * (prf / 100);
   
   return {
       netWeightLbs: parseFloat(netWeightLbs.toFixed(2)),

@@ -83,13 +83,13 @@ export const AdjustContentsModal = ({
       `artifacts/${appId}/users/${userId}/spiritInventory`,
       container.id
     );
-    
+
     // Apply the adjustment (add or subtract)
     const adjustmentMultiplier = isAddition ? 1 : -1;
     const newGrossNum =
       (currentFill.grossWeightLbs || container.tareWeightLbs || 0) +
-      (adjustmentMultiplier * netLbsToAdjust);
-      
+      adjustmentMultiplier * netLbsToAdjust;
+
     const finalCalcs = calculateDerivedValuesFromWeight(
       container.tareWeightLbs || 0,
       newGrossNum,
@@ -115,7 +115,9 @@ export const AdjustContentsModal = ({
       proof: proof,
       netWeightLbsChange: adjustmentMultiplier * netLbsToAdjust,
       proofGallonsChange: adjustmentMultiplier * proofGallonsAdjusted,
-      notes: `${isAddition ? 'Addition' : 'Sample or tax adjustment'} via ${removalInputMethod}.`,
+      notes: `${
+        isAddition ? "Addition" : "Sample or tax adjustment"
+      } via ${removalInputMethod}.`,
     };
     const logCollRef = collection(
       db,
@@ -199,7 +201,7 @@ export const AdjustContentsModal = ({
             onChange={(e) => setRemovalValue(e.target.value)}
             step="0.001"
             min="0"
-            placeholder={`Amount to ${isAddition ? 'add' : 'remove'}`}
+            placeholder={`Amount to ${isAddition ? "add" : "remove"}`}
             className="w-full bg-gray-700 p-2 rounded mt-1"
           />
           <div className="flex justify-end space-x-3 pt-3">
@@ -214,7 +216,7 @@ export const AdjustContentsModal = ({
               onClick={handleAdjust}
               className="bg-yellow-600 py-2 px-4 rounded"
             >
-              Confirm {isAddition ? 'Addition' : 'Removal'}
+              Confirm {isAddition ? "Addition" : "Removal"}
             </button>
           </div>
         </div>
