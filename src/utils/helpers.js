@@ -39,34 +39,34 @@ export const calculateSpiritDensity = (proof, temperature = 60) => {
   // TTB density values for different proof levels at 60°F
   // These values are based on TTB Table 4 (Gallons per pound) converted to density
   const densityTable = {
-    0: 8.345,    // Water
-    10: 8.268,   // TTB Table 4: 0.12095 gal/lb
-    20: 8.194,   // TTB Table 4: 0.12204 gal/lb
-    30: 8.115,   // TTB Table 4: 0.12322 gal/lb
-    40: 8.040,   // TTB Table 4: 0.12437 gal/lb
-    50: 7.968,   // TTB Table 4: 0.12550 gal/lb
-    60: 7.892,   // TTB Table 4: 0.12671 gal/lb
-    70: 7.820,   // TTB Table 4: 0.12788 gal/lb
-    80: 7.748,   // TTB Table 4: 0.12907 gal/lb
-    90: 7.676,   // TTB Table 4: 0.13027 gal/lb
-    100: 7.607,  // TTB Table 4: 0.13148 gal/lb
-    110: 7.536,  // TTB Table 4: 0.13270 gal/lb
-    120: 7.464,  // TTB Table 4: 0.13393 gal/lb
-    130: 7.392,  // TTB Table 4: 0.13517 gal/lb
-    140: 7.320,  // TTB Table 4: 0.13642 gal/lb
-    150: 7.248,  // TTB Table 4: 0.13768 gal/lb
-    160: 7.176,  // TTB Table 4: 0.13895 gal/lb
-    170: 7.104,  // TTB Table 4: 0.14023 gal/lb
-    180: 7.032,  // TTB Table 4: 0.14152 gal/lb
-    190: 6.960,  // TTB Table 4: 0.14282 gal/lb
-    200: 6.888   // Pure ethanol (TTB Table 4: 0.14413 gal/lb)
+    0: 8.3145,  
+    10: 8.2683,  
+    20: 8.2166,
+    30: 8.1701,
+    40: 8.1278,
+    50: 8.0850,
+    60: 8.0392,
+    70: 7.9870,
+    80: 7.9261,
+    90: 7.8571,
+    100: 7.7800,
+    110: 7.6960,
+    120: 7.6064,
+    130: 7.5112,
+    140: 7.4109,
+    150: 7.3050,
+    160: 7.1925,
+    170: 7.0729,
+    180: 6.9425,
+    190: 6.7943,
+    200: 6.6097
   };
   
   // For 99.9 proof, use the exact TTB value you provided
   if (proof >= 99.5 && proof <= 100.5) {
     // Interpolate between 99 and 100 proof values
-    const proof99 = 7.63066; 
-    const proof100 = 7.610053;
+    const proof99 = 7.78823; 
+    const proof100 = 7.78007;
     const weight = (proof - 99) / 1;
     return proof99 + (proof100 - proof99) * weight;
   }
