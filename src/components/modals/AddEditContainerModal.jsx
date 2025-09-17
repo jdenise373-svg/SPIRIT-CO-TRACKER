@@ -240,6 +240,7 @@ export const AddEditContainerModal = ({
     const batch = writeBatch(db);
 
     const finalTare = parseFloat(formData.tareWeightLbs);
+    const grosW = parseFloat(formData.grossWeightLbs);
     let finalProductType = formData.productType;
     let finalFillDate = formData.fillDate;
     let finalProof = parseFloat(formData.proof) || 0;
@@ -263,7 +264,7 @@ export const AddEditContainerModal = ({
         isEffectivelyEmptyInput)
     ) {
       newStatus = "empty";
-      finalCalcs = calculateDerivedValuesFromWeight(finalTare, finalTare, 0);
+      finalCalcs = calculateDerivedValuesFromWeight(finalTare, grosW, 0);
       finalProductType = null;
       finalFillDate = null;
       finalProof = 0;
@@ -600,7 +601,7 @@ export const AddEditContainerModal = ({
                 name="proof"
                 value={formData.proof}
                 onChange={handleChange}
-                step="0.1"
+                step="0.01"
                 min="0"
                 max="200"
                 className="mt-1 w-full bg-gray-700 p-2 rounded"
