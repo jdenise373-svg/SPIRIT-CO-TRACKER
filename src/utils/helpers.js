@@ -65,8 +65,8 @@ export const calculateSpiritDensity = (proof, temperature = 60) => {
   // For 99.9 proof, use the exact TTB value you provided
   if (proof >= 99.5 && proof <= 100.5) {
     // Interpolate between 99 and 100 proof values
-    const proof99 = 7.7809;  // Your TTB data: 1/0.12852 = 7.7809
-    const proof100 = 7.607;  // TTB Table 4: 1/0.13148 = 7.607
+    const proof99 = 7.63066; 
+    const proof100 = 7.610053;
     const weight = (proof - 99) / 1;
     return proof99 + (proof100 - proof99) * weight;
   }
@@ -106,7 +106,6 @@ export const calculateDerivedValuesFromWeight = (tareWeight, grossWeight, observ
   const spiritDensity = calculateSpiritDensity(prf, 60); // Always use 60°F for TTB standard
   let wineGallons = 0;
   if (netWeightLbs > 0 && spiritDensity > 0) { wineGallons = netWeightLbs / spiritDensity; }
-  
   // For proof gallons, use the temperature-corrected proof directly (no additional correction needed)
   const proofGallons = wineGallons * (prf / 100);
   
